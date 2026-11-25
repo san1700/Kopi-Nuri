@@ -172,3 +172,23 @@ model WaMessageLog {
 
   @@index([memberId, createdAt])
 }
+
+model LoginAttempt {
+  id          String    @id @default(cuid())
+  key         String    @unique
+  count       Int       @default(0)
+  lockedUntil DateTime?
+  updatedAt   DateTime  @updatedAt
+}
+
+model OtpCode {
+  id        String    @id @default(cuid())
+  phone     String
+  codeHash  String
+  expiresAt DateTime
+  usedAt    DateTime?
+  attempts  Int       @default(0)
+  createdAt DateTime  @default(now())
+
+  @@index([phone, createdAt])
+}

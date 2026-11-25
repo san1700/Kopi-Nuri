@@ -2,31 +2,11 @@ import NextAuth from "next-auth";
 import Credentials from "next-auth/providers/credentials";
 import { compare } from "bcryptjs";
 import prisma from "@/lib/prisma";
-
-// Rate limit login staf: maksimal 5 percobaan gagal, lockout 15 menit per username
-const staffLoginAttempts = new Map<string, { count: number; lastAttempt: number }>();
-const MAX_STAFF_ATTEMPTS = 5;
-const STAFF_LOCKOUT_MS = 15 * 60 * 1000;
-
-function isStaffRateLimited(username: string): boolean {
-  const record = staffLoginAttempts.get(username);
-  if (!record) return false;
-  if (Date.now() - record.lastAttempt > STAFF_LOCKOUT_MS) {
-    staffLoginAttempts.delete(username);
-    return false;
-  }
-  return record.count >= MAX_STAFF_ATTEMPTS;
-}
-
-function recordStaffFailedAttempt(username: string): void {
-  const now = Date.now();
-  const record = staffLoginAttempts.get(username);
-  if (!record || now - record.lastAttempt > STAFF_LOCKOUT_MS) {
-    staffLoginAttempts.set(username, { count: 1, lastAttempt: now });
-  } else {
-    staffLoginAttempts.set(username, { count: record.count + 1, lastAttempt: now });
-  }
-}
+import {
+  checkLoginRateLimit,
+  recordLoginFailure,
+  resetLoginAttempts,
+} from "@/lib/auth-rate-limit";
 
 export const { handlers, auth, signIn, signOut } = NextAuth({
   trustHost: true,
@@ -47,7 +27,10 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         if (!credentials?.username || !credentials?.password) return null;
 
         const username = String(credentials.username).trim().toLowerCase();
-        if (isStaffRateLimited(username)) {
+        const rateKey = `staff:${username}`;
+
+        const rateCheck = await checkLoginRateLimit(rateKey);
+        if (!rateCheck.allowed) {
           return null;
         }
 
@@ -56,7 +39,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         });
 
         if (!user || !user.isActive) {
-          recordStaffFailedAttempt(username);
+          await recordLoginFailure(rateKey);
           return null;
         }
 
@@ -66,11 +49,11 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         );
 
         if (!isValid) {
-          recordStaffFailedAttempt(username);
+          await recordLoginFailure(rateKey);
           return null;
         }
 
-        staffLoginAttempts.delete(username);
+        await resetLoginAttempts(rateKey);
 
         return {
           id: user.id,
@@ -104,4 +87,3 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
     },
   },
 });
-

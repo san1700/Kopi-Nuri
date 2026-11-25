@@ -17,7 +17,6 @@ import {
   clearLoginAttempts,
   generateOtp,
   verifyOtp,
-  getSimulatedOtp,
 } from "@/lib/member-auth";
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
@@ -67,7 +66,13 @@ export async function requestMemberOtp(formData: FormData) {
   }
 
   // Generate OTP simulasi (di production: kirim via WhatsApp)
-  const otp = generateOtp(phone);
+  const otpResult = await generateOtp(phone);
+  if (!otpResult.ok) {
+    return {
+      success: false,
+      error: otpResult.error,
+    };
+  }
 
   // Mode simulasi: kembalikan OTP di response (akan dihapus saat WhatsApp aktif)
   return {
@@ -75,7 +80,7 @@ export async function requestMemberOtp(formData: FormData) {
     phone,
     // OTP dikembalikan hanya untuk mode simulasi
     // Ganti dengan: success: true (tanpa OTP) saat WhatsApp aktif
-    simulatedOtp: otp,
+    simulatedOtp: otpResult.otp,
     message: `Kode OTP telah dikirim ke ${phone}`,
   };
 }
@@ -96,11 +101,11 @@ export async function verifyOtpAndRegister(formData: FormData) {
   }
 
   // Verifikasi OTP
-  const otpValid = verifyOtp(phone, otp);
-  if (!otpValid) {
+  const otpCheck = await verifyOtp(phone, otp);
+  if (!otpCheck.valid) {
     return {
       success: false,
-      error: "Kode OTP tidak valid atau sudah kadaluarsa. Silakan minta kode baru.",
+      error: otpCheck.error || "Kode OTP tidak valid atau sudah kadaluarsa. Silakan minta kode baru.",
     };
   }
 
@@ -205,8 +210,8 @@ export async function loginMember(formData: FormData) {
 
   const phone = normalizePhone(rawPhone);
 
-  // Rate limiting
-  const rateCheck = checkRateLimit(phone);
+  // Rate limiting (berbasis DB)
+  const rateCheck = await checkRateLimit(phone);
   if (!rateCheck.allowed) {
     const remainingMin = Math.ceil((rateCheck.remainingMs ?? 0) / 60000);
     return {
@@ -218,7 +223,7 @@ export async function loginMember(formData: FormData) {
   const member = await prisma.member.findUnique({ where: { phone } });
 
   if (!member || !member.isActive) {
-    recordFailedAttempt(phone);
+    await recordFailedAttempt(phone);
     return {
       success: false,
       error: "Nomor HP tidak terdaftar atau akun dinonaktifkan.",
@@ -231,12 +236,12 @@ export async function loginMember(formData: FormData) {
 
   const pinValid = await verifyPin(pin, member.pinHash);
   if (!pinValid) {
-    recordFailedAttempt(phone);
+    await recordFailedAttempt(phone);
     return { success: false, error: "PIN salah. Periksa kembali PIN Anda." };
   }
 
   // Login berhasil
-  clearLoginAttempts(phone);
+  await clearLoginAttempts(phone);
   await setMemberSession({
     memberId: member.id,
     memberCode: member.code,

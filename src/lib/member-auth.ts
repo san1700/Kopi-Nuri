@@ -1,13 +1,23 @@
 import { cookies } from "next/headers";
 import { SignJWT, jwtVerify } from "jose";
-import prisma from "@/lib/prisma";
 import { compare, hash } from "bcryptjs";
+import { createHmac, randomInt } from "crypto";
+import prisma from "@/lib/prisma";
+import {
+  checkLoginRateLimit,
+  recordLoginFailure,
+  resetLoginAttempts,
+} from "@/lib/auth-rate-limit";
 
 const MEMBER_SESSION_COOKIE = "kopi_nuri_member_session";
-const SECRET = new TextEncoder().encode(
-  process.env.AUTH_SECRET ?? "dev-secret-ganti-di-production-min-32-char"
-);
+const SECRET_STRING =
+  process.env.AUTH_SECRET ?? "dev-secret-ganti-di-production-min-32-char";
+const SECRET = new TextEncoder().encode(SECRET_STRING);
 const SESSION_MAX_AGE = 60 * 60 * 24 * 30; // 30 hari
+
+const OTP_TTL_MS = 5 * 60 * 1000; // 5 menit
+const OTP_RESEND_COOLDOWN_MS = 60 * 1000; // 60 detik
+const OTP_MAX_ATTEMPTS = 5;
 
 export interface MemberSession {
   memberId: string;
@@ -15,7 +25,7 @@ export interface MemberSession {
 }
 
 /**
- * Buat JWT session untuk member dan simpan sebagai cookie httpOnly
+ * Buat JWT session untuk member dan simpan sebagai cookie httpOnly (stateless, tanpa memori)
  */
 export async function setMemberSession(session: MemberSession): Promise<void> {
   const token = await new SignJWT({ ...session })
@@ -67,7 +77,7 @@ export async function clearMemberSession(): Promise<void> {
   });
 }
 
-// --- Simpan PIN yang di-hash ---
+// --- PIN Hashing ---
 export async function hashPin(pin: string): Promise<string> {
   return await hash(pin, 10);
 }
@@ -76,80 +86,136 @@ export async function verifyPin(pin: string, pinHash: string): Promise<boolean> 
   return await compare(pin, pinHash);
 }
 
-// Rate limiting: simpan di memori (dalam production pakai Redis)
-// Map: phone -> { count, lastAttempt }
-const loginAttempts = new Map<string, { count: number; lastAttempt: number }>();
-const MAX_ATTEMPTS = 5;
-const LOCKOUT_MS = 15 * 60 * 1000; // 15 menit
-
-export function checkRateLimit(phone: string): { allowed: boolean; remainingMs?: number } {
-  const now = Date.now();
-  const record = loginAttempts.get(phone);
-
-  if (!record) return { allowed: true };
-
-  // Reset jika lockout sudah expired
-  if (now - record.lastAttempt > LOCKOUT_MS) {
-    loginAttempts.delete(phone);
-    return { allowed: true };
-  }
-
-  if (record.count >= MAX_ATTEMPTS) {
-    const remainingMs = LOCKOUT_MS - (now - record.lastAttempt);
-    return { allowed: false, remainingMs };
-  }
-
-  return { allowed: true };
+// --- Rate limit login member (berbasis DB) ---
+export async function checkRateLimit(
+  phone: string
+): Promise<{ allowed: boolean; remainingMs?: number }> {
+  return checkLoginRateLimit(`member:${phone}`);
 }
 
-export function recordFailedAttempt(phone: string): void {
-  const now = Date.now();
-  const record = loginAttempts.get(phone);
-
-  if (!record || now - record.lastAttempt > LOCKOUT_MS) {
-    loginAttempts.set(phone, { count: 1, lastAttempt: now });
-  } else {
-    loginAttempts.set(phone, { count: record.count + 1, lastAttempt: now });
-  }
+export async function recordFailedAttempt(phone: string): Promise<void> {
+  return recordLoginFailure(`member:${phone}`);
 }
 
-export function clearLoginAttempts(phone: string): void {
-  loginAttempts.delete(phone);
+export async function clearLoginAttempts(phone: string): Promise<void> {
+  return resetLoginAttempts(`member:${phone}`);
 }
 
-// --- OTP simulasi (mudah diganti WhatsApp nanti) ---
-// Simpan OTP: phone -> { otp, expiresAt }
-const otpStore = new Map<string, { otp: string; expiresAt: number }>();
+// --- OTP berbasis Database (stateless untuk serverless) ---
+function hashOtpCode(phone: string, otp: string): string {
+  return createHmac("sha256", SECRET_STRING)
+    .update(`${phone}:${otp.trim()}`)
+    .digest("hex");
+}
 
-export function generateOtp(phone: string): string {
-  const otp = String(Math.floor(100000 + Math.random() * 900000)); // 6 digit
-  otpStore.set(phone, {
-    otp,
-    expiresAt: Date.now() + 10 * 60 * 1000, // 10 menit
+export type GenerateOtpResult =
+  | { ok: true; otp: string }
+  | { ok: false; error: string; retryAfterSec: number };
+
+/**
+ * Buat kode OTP 6 digit, simpan hash SHA-256 ke tabel OtpCode (berlaku 5 menit).
+ * Dibatasi cooldown 60 detik per nomor HP.
+ */
+export async function generateOtp(phone: string): Promise<GenerateOtpResult> {
+  const now = new Date();
+
+  const latest = await prisma.otpCode.findFirst({
+    where: { phone },
+    orderBy: { createdAt: "desc" },
+    select: { createdAt: true },
   });
 
-  // Mode simulasi: log ke console (akan diganti WhatsApp)
-  console.log(`[OTP SIMULASI] Phone: ${phone} → Kode: ${otp}`);
-
-  return otp;
-}
-
-export function verifyOtp(phone: string, inputOtp: string): boolean {
-  const record = otpStore.get(phone);
-  if (!record) return false;
-  if (Date.now() > record.expiresAt) {
-    otpStore.delete(phone);
-    return false;
+  if (latest) {
+    const elapsedMs = now.getTime() - latest.createdAt.getTime();
+    if (elapsedMs < OTP_RESEND_COOLDOWN_MS) {
+      const retryAfterSec = Math.ceil(
+        (OTP_RESEND_COOLDOWN_MS - elapsedMs) / 1000
+      );
+      return {
+        ok: false,
+        retryAfterSec,
+        error: `Tunggu ${retryAfterSec} detik sebelum meminta kode OTP baru.`,
+      };
+    }
   }
-  if (record.otp !== inputOtp.trim()) return false;
-  otpStore.delete(phone); // Single-use
-  return true;
+
+  const otp = String(randomInt(100000, 1000000));
+  const codeHash = hashOtpCode(phone, otp);
+  const expiresAt = new Date(now.getTime() + OTP_TTL_MS);
+
+  await prisma.otpCode.create({
+    data: {
+      phone,
+      codeHash,
+      expiresAt,
+      attempts: 0,
+    },
+  });
+
+  return { ok: true, otp };
 }
 
-// Ambil OTP untuk ditampilkan di UI (mode simulasi)
-export function getSimulatedOtp(phone: string): string | null {
-  const record = otpStore.get(phone);
-  if (!record || Date.now() > record.expiresAt) return null;
-  return record.otp;
-}
+/**
+ * Verifikasi OTP dari tabel OtpCode:
+ * - Hanya berlaku 5 menit
+ * - Sekali pakai (usedAt)
+ * - Maksimal 5 kali salah
+ */
+export async function verifyOtp(
+  phone: string,
+  inputOtp: string
+): Promise<{ valid: boolean; error?: string }> {
+  const now = new Date();
+  const record = await prisma.otpCode.findFirst({
+    where: { phone, usedAt: null },
+    orderBy: { createdAt: "desc" },
+  });
 
+  if (!record) {
+    return {
+      valid: false,
+      error: "Kode OTP tidak ditemukan atau sudah digunakan. Silakan minta kode baru.",
+    };
+  }
+
+  if (record.expiresAt <= now) {
+    return {
+      valid: false,
+      error: "Kode OTP sudah kadaluarsa. Silakan minta kode baru.",
+    };
+  }
+
+  if (record.attempts >= OTP_MAX_ATTEMPTS) {
+    return {
+      valid: false,
+      error: "Terlalu banyak percobaan OTP salah. Silakan minta kode baru.",
+    };
+  }
+
+  const inputHash = hashOtpCode(phone, inputOtp);
+  if (inputHash !== record.codeHash) {
+    await prisma.otpCode.update({
+      where: { id: record.id },
+      data: { attempts: { increment: 1 } },
+    });
+    return {
+      valid: false,
+      error: "Kode OTP tidak sesuai.",
+    };
+  }
+
+  // Tandai usedAt secara atomik agar tidak bisa dipakai dua kali
+  const updated = await prisma.otpCode.updateMany({
+    where: { id: record.id, usedAt: null },
+    data: { usedAt: now },
+  });
+
+  if (updated.count !== 1) {
+    return {
+      valid: false,
+      error: "Kode OTP sudah digunakan.",
+    };
+  }
+
+  return { valid: true };
+}
