@@ -1,0 +1,174 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+enum Role {
+  ADMIN
+  CASHIER
+}
+
+enum MemberSource {
+  ADMIN
+  SELF
+}
+
+enum LedgerType {
+  EARN
+  REDEEM
+  BONUS
+  ADJUST
+}
+
+enum VoucherStatus {
+  UNUSED
+  USED
+}
+
+enum Shift {
+  PAGI
+  SIANG
+  MALAM
+}
+
+enum WaStatus {
+  QUEUED
+  SENT
+  FAILED
+  SKIPPED
+}
+
+model Branch {
+  id           String        @id @default(cuid())
+  name         String
+  address      String?
+  createdAt    DateTime      @default(now())
+  users        User[]
+  transactions Transaction[]
+}
+
+model User {
+  id                String        @id @default(cuid())
+  name              String
+  username          String        @unique
+  passwordHash      String
+  role              Role
+  isActive          Boolean       @default(true)
+  branchId          String
+  branch            Branch        @relation(fields: [branchId], references: [id])
+  createdAt         DateTime      @default(now())
+  transactions      Transaction[]
+  ledgerEntries     PointLedger[]
+  validatedVouchers Redemption[]
+}
+
+model Member {
+  id           String        @id @default(cuid())
+  code         String        @unique   // MBR-000001, isi QR code
+  name         String
+  phone        String        @unique   // format 62812...
+  email        String?
+  pinHash      String?
+  source       MemberSource  @default(ADMIN)
+  isActive     Boolean       @default(true)
+  waOptIn      Boolean       @default(false)
+  waOptInAt    DateTime?
+  lastVisitAt  DateTime?
+  lastWaSentAt DateTime?
+  createdAt    DateTime      @default(now())
+  transactions Transaction[]
+  ledger       PointLedger[]
+  redemptions  Redemption[]
+  waLogs       WaMessageLog[]
+
+  @@index([name])
+  @@index([lastVisitAt])
+}
+
+model Transaction {
+  id             String        @id @default(cuid())
+  memberId       String
+  member         Member        @relation(fields: [memberId], references: [id])
+  cashierId      String
+  cashier        User          @relation(fields: [cashierId], references: [id])
+  branchId       String
+  branch         Branch        @relation(fields: [branchId], references: [id])
+  shift          Shift
+  amount         Int
+  pointsEarned   Int
+  idempotencyKey String?       @unique
+  createdAt      DateTime      @default(now())
+  ledger         PointLedger[]
+
+  @@index([memberId, createdAt])
+  @@index([createdAt])
+}
+
+// Saldo poin = SUM(points) per member. Jangan simpan saldo sebagai kolom.
+model PointLedger {
+  id            String       @id @default(cuid())
+  memberId      String
+  member        Member       @relation(fields: [memberId], references: [id])
+  points        Int
+  type          LedgerType
+  note          String?
+  transactionId String?
+  transaction   Transaction? @relation(fields: [transactionId], references: [id])
+  redemptionId  String?      @unique
+  redemption    Redemption?  @relation(fields: [redemptionId], references: [id])
+  createdById   String?
+  createdBy     User?        @relation(fields: [createdById], references: [id])
+  createdAt     DateTime     @default(now())
+
+  @@index([memberId, createdAt])
+}
+
+model Reward {
+  id          String       @id @default(cuid())
+  name        String
+  description String?
+  pointsCost  Int
+  stock       Int?
+  isActive    Boolean      @default(true)
+  createdAt   DateTime     @default(now())
+  redemptions Redemption[]
+}
+
+model Redemption {
+  id          String        @id @default(cuid())
+  memberId    String
+  member      Member        @relation(fields: [memberId], references: [id])
+  rewardId    String
+  reward      Reward        @relation(fields: [rewardId], references: [id])
+  pointsSpent Int
+  voucherCode String        @unique
+  status      VoucherStatus @default(UNUSED)
+  usedAt      DateTime?
+  usedById    String?
+  usedBy      User?         @relation(fields: [usedById], references: [id])
+  createdAt   DateTime      @default(now())
+  ledger      PointLedger?
+}
+
+model Setting {
+  key   String @id
+  value String
+}
+
+model WaMessageLog {
+  id           String   @id @default(cuid())
+  memberId     String
+  member       Member   @relation(fields: [memberId], references: [id])
+  templateName String
+  status       WaStatus @default(QUEUED)
+  waMessageId  String?
+  error        String?
+  createdAt    DateTime @default(now())
+
+  @@index([memberId, createdAt])
+}

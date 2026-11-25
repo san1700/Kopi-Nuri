@@ -1,0 +1,26 @@
+{
+  "name": "Kopi Nuri Loyalty",
+  "short_name": "Kopi Nuri",
+  "description": "Program loyalitas Kopi Nuri Coffee & Space",
+  "start_url": "/member",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#FDF8F0",
+  "theme_color": "#1F5C2E",
+  "icons": [
+    {
+      "src": "/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ],
+  "categories": ["food", "lifestyle", "shopping"]
+}
+
