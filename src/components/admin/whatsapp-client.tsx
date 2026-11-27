@@ -10,13 +10,17 @@ import {
   Send,
   AlertTriangle,
   CheckCircle2,
-  XCircle,
-  Clock,
-  SkipForward,
   Loader2,
-  FileText,
-  Users,
 } from "lucide-react";
+import {
+  PageHeader,
+  StatCard,
+  DataTable,
+  StatusPill,
+  EmptyState,
+  FormField,
+  FilterChips,
+} from "@/components/ui/kopi-ui";
 
 interface WaLogItem {
   id: string;
@@ -63,41 +67,11 @@ interface DashboardProps {
 }
 
 function StatusBadge({ status }: { status: WaLogItem["status"] }) {
-  if (status === "SENT") {
-    return (
-      <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium bg-emerald-50 text-emerald-700 border border-emerald-200">
-        <CheckCircle2 className="w-3 h-3" /> SENT
-      </span>
-    );
-  }
-  if (status === "SKIPPED") {
-    return (
-      <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium bg-amber-50 text-amber-700 border border-amber-200">
-        <SkipForward className="w-3 h-3" /> SKIPPED
-      </span>
-    );
-  }
-  if (status === "FAILED") {
-    return (
-      <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-50 text-red-700 border border-red-200">
-        <XCircle className="w-3 h-3" /> FAILED
-      </span>
-    );
-  }
-  return (
-    <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium bg-stone-100 text-stone-700 border border-stone-200">
-      <Clock className="w-3 h-3" /> QUEUED
-    </span>
-  );
+  if (status === "SENT") return <StatusPill variant="success">Sent</StatusPill>;
+  if (status === "SKIPPED") return <StatusPill variant="warn">Skipped</StatusPill>;
+  if (status === "FAILED") return <StatusPill variant="danger">Failed</StatusPill>;
+  return <StatusPill variant="neutral">Queued</StatusPill>;
 }
-
-const STATUS_FILTERS = [
-  { label: "Semua", value: "ALL" },
-  { label: "SENT", value: "SENT" },
-  { label: "SKIPPED", value: "SKIPPED" },
-  { label: "FAILED", value: "FAILED" },
-  { label: "QUEUED", value: "QUEUED" },
-];
 
 export function WhatsappClient({ data, currentStatus }: DashboardProps) {
   const router = useRouter();
@@ -162,315 +136,253 @@ export function WhatsappClient({ data, currentStatus }: DashboardProps) {
   }
 
   return (
-    <div className="space-y-6">
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-        <div>
-          <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100 flex items-center gap-2">
-            <MessageCircle className="w-6 h-6 text-kopi-green" />
-            WhatsApp Comeback
-          </h1>
-          <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
-            Pantau log pengiriman pesan ajakan kembali dan uji kirim template Meta Cloud API.
-          </p>
-        </div>
+    <div>
+      <PageHeader
+        title="WhatsApp comeback"
+        subtitle="Pantau log pesan ajakan kembali dan uji kirim template Meta Cloud API."
+        actions={
+          data.config.dryRun ? (
+            <span className="inline-flex items-center gap-2 font-semibold text-[13px] px-3.5 py-2 rounded-[12px] bg-[var(--warnbg)] text-[var(--warn)]">
+              <AlertTriangle size={16} />
+              Mode dry run aktif (WA_DRY_RUN=true)
+            </span>
+          ) : (
+            <span className="inline-flex items-center gap-2 font-semibold text-[13px] px-3.5 py-2 rounded-[12px] bg-[var(--mint)] text-[var(--brand)]">
+              <CheckCircle2 size={16} />
+              Mode live ({data.config.apiVersion})
+            </span>
+          )
+        }
+      />
 
-        {/* Mode badge */}
-        {data.config.dryRun ? (
-          <div className="inline-flex items-center gap-2 px-3.5 py-2 rounded-xl bg-amber-50 border border-amber-300 text-amber-800 text-xs font-semibold">
-            <AlertTriangle className="w-4 h-4 text-amber-600" />
-            MODE DRY RUN AKTIF (WA_DRY_RUN=true)
-          </div>
-        ) : (
-          <div className="inline-flex items-center gap-2 px-3.5 py-2 rounded-xl bg-emerald-50 border border-emerald-300 text-emerald-800 text-xs font-semibold">
-            <CheckCircle2 className="w-4 h-4 text-emerald-600" />
-            MODE LIVE ({data.config.apiVersion})
-          </div>
-        )}
-      </div>
-
-      {/* Stat Cards */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        <div className="bg-white dark:bg-kopi-dark-card rounded-xl p-4 border border-gray-100 dark:border-gray-800">
-          <div className="flex items-center justify-between text-xs text-gray-500 mb-1">
-            <span>Member Opt-In WA</span>
-            <Users className="w-4 h-4 text-kopi-green" />
-          </div>
-          <p className="text-2xl font-bold text-gray-900 dark:text-gray-100">
-            {data.stats.optInCount}
-          </p>
-        </div>
-
-        <div className="bg-white dark:bg-kopi-dark-card rounded-xl p-4 border border-gray-100 dark:border-gray-800">
-          <div className="flex items-center justify-between text-xs text-gray-500 mb-1">
-            <span>Terkirim (SENT)</span>
-            <CheckCircle2 className="w-4 h-4 text-emerald-600" />
-          </div>
-          <p className="text-2xl font-bold text-emerald-600">
-            {data.stats.sentCount}
-          </p>
-        </div>
-
-        <div className="bg-white dark:bg-kopi-dark-card rounded-xl p-4 border border-gray-100 dark:border-gray-800">
-          <div className="flex items-center justify-between text-xs text-gray-500 mb-1">
-            <span>Dry Run (SKIPPED)</span>
-            <SkipForward className="w-4 h-4 text-amber-600" />
-          </div>
-          <p className="text-2xl font-bold text-amber-600">
-            {data.stats.skippedCount}
-          </p>
-        </div>
-
-        <div className="bg-white dark:bg-kopi-dark-card rounded-xl p-4 border border-gray-100 dark:border-gray-800">
-          <div className="flex items-center justify-between text-xs text-gray-500 mb-1">
-            <span>Gagal (FAILED)</span>
-            <XCircle className="w-4 h-4 text-red-500" />
-          </div>
-          <p className="text-2xl font-bold text-red-600">
-            {data.stats.failedCount}
-          </p>
-        </div>
-      </div>
+      {/* 4 StatCard */}
+      <section className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
+        <StatCard label="Member opt-in WA" value={data.stats.optInCount} />
+        <StatCard
+          label="Terkirim (sent)"
+          value={data.stats.sentCount}
+          valueClassName="text-[var(--brand)]"
+        />
+        <StatCard
+          label="Dry run (skipped)"
+          value={data.stats.skippedCount}
+          valueClassName="text-[var(--warn)]"
+        />
+        <StatCard
+          label="Gagal (failed)"
+          value={data.stats.failedCount}
+          valueClassName="text-[var(--bad)]"
+        />
+      </section>
 
       {/* Template Info + Send Test Grid */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      <section className="grid grid-cols-1 lg:grid-cols-2 gap-4 mt-4">
         {/* Template & Rules */}
-        <div className="bg-white dark:bg-kopi-dark-card rounded-xl p-5 border border-gray-100 dark:border-gray-800 space-y-4">
-          <div className="flex items-center gap-2">
-            <FileText className="w-4 h-4 text-kopi-green" />
-            <h2 className="font-semibold text-gray-900 dark:text-gray-100">
-              Template &amp; Aturan Pengiriman
-            </h2>
-          </div>
+        <div
+          className="bg-[var(--card)] border border-[var(--line)] rounded-[20px] px-5 py-[18px]"
+          style={{ boxShadow: "var(--sh)" }}
+        >
+          <h2 className="text-[16px] font-bold text-[var(--ink)] mb-3.5">
+            Template &amp; aturan pengiriman
+          </h2>
 
-          <div className="grid grid-cols-2 gap-3 text-xs">
-            <div className="bg-stone-50 dark:bg-stone-900/50 rounded-lg p-3">
-              <p className="text-gray-400">Nama Template</p>
-              <p className="font-mono font-semibold text-gray-800 dark:text-gray-200 mt-0.5">
-                {data.config.templateName}
-              </p>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+            <div className="bg-[var(--bg)] rounded-[14px] px-3.5 py-3">
+              <small className="block text-[var(--mut)] text-[12px]">Nama template</small>
+              <b className="font-mono text-[var(--ink)]">{data.config.templateName}</b>
             </div>
-            <div className="bg-stone-50 dark:bg-stone-900/50 rounded-lg p-3">
-              <p className="text-gray-400">Graph API &amp; Kredensial</p>
-              <p className="font-semibold text-gray-800 dark:text-gray-200 mt-0.5">
+            <div className="bg-[var(--bg)] rounded-[14px] px-3.5 py-3">
+              <small className="block text-[var(--mut)] text-[12px]">
+                Graph API &amp; kredensial
+              </small>
+              <b className="text-[var(--ink)]">
                 {data.config.apiVersion} ·{" "}
-                {data.config.hasCredentials ? "Terisi" : "Belum diisi"}
-              </p>
+                {data.config.hasCredentials ? "terisi" : "belum diisi"}
+              </b>
             </div>
-            <div className="bg-stone-50 dark:bg-stone-900/50 rounded-lg p-3">
-              <p className="text-gray-400">Batas Tidak Berkunjung</p>
-              <p className="font-semibold text-gray-800 dark:text-gray-200 mt-0.5">
-                &gt; {data.config.inactiveDays} hari
-              </p>
+            <div className="bg-[var(--bg)] rounded-[14px] px-3.5 py-3">
+              <small className="block text-[var(--mut)] text-[12px]">
+                Batas tidak berkunjung
+              </small>
+              <b className="text-[var(--ink)]">&gt; {data.config.inactiveDays} hari</b>
             </div>
-            <div className="bg-stone-50 dark:bg-stone-900/50 rounded-lg p-3">
-              <p className="text-gray-400">Cooldown &amp; Jam Kirim</p>
-              <p className="font-semibold text-gray-800 dark:text-gray-200 mt-0.5">
-                {data.config.cooldownDays} hari · 09:00–20:00 WIB
-              </p>
+            <div className="bg-[var(--bg)] rounded-[14px] px-3.5 py-3">
+              <small className="block text-[var(--mut)] text-[12px]">
+                Cooldown &amp; jam kirim
+              </small>
+              <b className="text-[var(--ink)]">
+                {data.config.cooldownDays} hari · 09.00–20.00 WIB
+              </b>
             </div>
           </div>
 
-          <div className="bg-emerald-50/70 dark:bg-emerald-950/30 border border-emerald-200 dark:border-emerald-900 rounded-xl p-3.5 text-xs space-y-2">
-            <p className="font-semibold text-kopi-green dark:text-kopi-olive">
-              Pratinjau Isi Template
-            </p>
-            <p className="text-gray-700 dark:text-gray-300 leading-relaxed">
+          <div className="bg-[var(--mint)] rounded-[16px] p-4 mt-3">
+            <b className="text-[var(--brand)] block text-[13.5px]">Pratinjau isi template</b>
+            <p className="text-[13px] text-[var(--ink)] mt-1.5 leading-relaxed">
               {data.config.templatePreview}
             </p>
-            <div className="pt-1 flex flex-wrap gap-2 text-[11px] text-gray-600 dark:text-gray-400">
-              <span className="bg-white dark:bg-stone-800 px-2 py-0.5 rounded border border-emerald-200 dark:border-stone-700">
-                <code>{"{{1}}"}</code> = Nama Member
-              </span>
-              <span className="bg-white dark:bg-stone-800 px-2 py-0.5 rounded border border-emerald-200 dark:border-stone-700">
-                <code>{"{{2}}"}</code> = Saldo Poin
-              </span>
+            <div className="flex flex-wrap gap-1.5 mt-2.5">
+              <StatusPill variant="success">{"{{1}}"} = nama member</StatusPill>
+              <StatusPill variant="success">{"{{2}}"} = saldo poin</StatusPill>
             </div>
           </div>
         </div>
 
         {/* Form Kirim Uji */}
-        <div className="bg-white dark:bg-kopi-dark-card rounded-xl p-5 border border-gray-100 dark:border-gray-800 space-y-4">
-          <div className="flex items-center gap-2">
-            <Send className="w-4 h-4 text-kopi-green" />
-            <h2 className="font-semibold text-gray-900 dark:text-gray-100">
-              Kirim Uji ke Satu Nomor
-            </h2>
-          </div>
+        <div
+          className="bg-[var(--card)] border border-[var(--line)] rounded-[20px] px-5 py-[18px]"
+          style={{ boxShadow: "var(--sh)" }}
+        >
+          <h2 className="text-[16px] font-bold text-[var(--ink)] mb-3.5">
+            Kirim uji ke satu nomor
+          </h2>
 
-          <form onSubmit={handleSendTest} className="space-y-3">
-            <div>
-              <label className="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">
-                Nomor HP Tujuan
-              </label>
+          <form onSubmit={handleSendTest} className="space-y-3.5">
+            <FormField label="Nomor HP tujuan">
               <input
                 type="tel"
                 value={phone}
                 onChange={(e) => setPhone(e.target.value)}
                 placeholder="08123456789 atau 628123456789"
-                className="w-full border border-gray-200 dark:border-gray-700 rounded-lg px-3 py-2 text-sm bg-transparent focus:outline-none focus:border-kopi-green"
+                className="border border-[var(--line)] bg-[var(--in)] text-[var(--ink)] rounded-[12px] px-3.5 py-2.5 text-[14px]"
               />
-            </div>
+            </FormField>
 
-            <div className="grid grid-cols-2 gap-3">
-              <div>
-                <label className="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">
-                  Param {"{{1}}"} (Nama)
-                </label>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+              <FormField label="Param {{1}} (nama)">
                 <input
                   type="text"
                   value={testName}
                   onChange={(e) => setTestName(e.target.value)}
-                  className="w-full border border-gray-200 dark:border-gray-700 rounded-lg px-3 py-2 text-sm bg-transparent focus:outline-none focus:border-kopi-green"
+                  className="border border-[var(--line)] bg-[var(--in)] text-[var(--ink)] rounded-[12px] px-3.5 py-2.5 text-[14px]"
                 />
-              </div>
-              <div>
-                <label className="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">
-                  Param {"{{2}}"} (Poin)
-                </label>
+              </FormField>
+              <FormField label="Param {{2}} (poin)">
                 <input
                   type="number"
                   min={0}
                   value={testPoints}
                   onChange={(e) => setTestPoints(e.target.value)}
-                  className="w-full border border-gray-200 dark:border-gray-700 rounded-lg px-3 py-2 text-sm bg-transparent focus:outline-none focus:border-kopi-green"
+                  className="border border-[var(--line)] bg-[var(--in)] text-[var(--ink)] rounded-[12px] px-3.5 py-2.5 text-[14px]"
                 />
-              </div>
+              </FormField>
             </div>
 
             <button
               type="submit"
               disabled={isPending}
-              className="w-full bg-kopi-green hover:bg-kopi-green/90 text-white rounded-lg py-2.5 text-sm font-semibold flex items-center justify-center gap-2 disabled:opacity-50"
+              className="w-full inline-flex items-center justify-center gap-2 bg-[var(--btn)] text-white rounded-[12px] py-3 text-[14px] font-semibold cursor-pointer disabled:opacity-50"
             >
-              {isPending ? (
-                <Loader2 className="w-4 h-4 animate-spin" />
-              ) : (
-                <Send className="w-4 h-4" />
-              )}
-              {data.config.dryRun ? "Simulasikan Kirim Uji (Dry Run)" : "Kirim Uji Sekarang"}
+              {isPending ? <Loader2 size={17} className="animate-spin" /> : <Send size={17} />}
+              {data.config.dryRun
+                ? "Simulasikan kirim uji (dry run)"
+                : "Kirim uji sekarang"}
             </button>
           </form>
 
           {lastPreview && (
-            <div className="bg-stone-50 dark:bg-stone-900/50 border border-stone-200 dark:border-stone-700 rounded-lg p-3 text-xs space-y-1">
-              <p className="font-semibold text-gray-700 dark:text-gray-200">
-                Hasil Uji: {lastPreview.status} → {lastPreview.to}
+            <div className="mt-3.5 bg-[var(--bg)] border border-[var(--line)] rounded-[14px] p-3.5 text-[12.5px] space-y-1">
+              <b className="text-[var(--ink)]">
+                Hasil uji: {lastPreview.status} → {lastPreview.to}
                 {lastPreview.loggedToMember ? " (Tercatat di WaMessageLog)" : ""}
-              </p>
-              <p className="text-gray-600 dark:text-gray-400">
-                {lastPreview.previewMessage}
-              </p>
+              </b>
+              <p className="text-[var(--mut)]">{lastPreview.previewMessage}</p>
             </div>
           )}
         </div>
-      </div>
+      </section>
 
       {/* Log Pengiriman */}
-      <div className="bg-white dark:bg-kopi-dark-card rounded-xl border border-gray-100 dark:border-gray-800 overflow-hidden">
-        <div className="p-4 border-b border-gray-100 dark:border-gray-800 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-          <h2 className="font-semibold text-gray-900 dark:text-gray-100">
-            Log Pengiriman ({data.pagination.totalCount})
+      <div
+        className="bg-[var(--card)] border border-[var(--line)] rounded-[20px] px-5 py-[18px] mt-4"
+        style={{ boxShadow: "var(--sh)" }}
+      >
+        <div className="flex flex-wrap items-center justify-between gap-2.5 mb-3.5">
+          <h2 className="text-[16px] font-bold text-[var(--ink)]">
+            Log pengiriman ({data.pagination.totalCount})
           </h2>
 
-          <div className="flex flex-wrap gap-1.5">
-            {STATUS_FILTERS.map((f) => (
-              <button
-                key={f.value}
-                onClick={() => handleStatusFilter(f.value)}
-                className={`px-3 py-1 rounded-full text-xs font-medium transition-colors ${
-                  currentStatus === f.value
-                    ? "bg-kopi-green text-white"
-                    : "bg-stone-100 text-stone-600 hover:bg-stone-200 dark:bg-stone-800 dark:text-stone-300"
-                }`}
-              >
-                {f.label}
-              </button>
-            ))}
-          </div>
+          <FilterChips
+            value={currentStatus}
+            onChange={handleStatusFilter}
+            options={[
+              { label: "Semua", value: "ALL" },
+              { label: "Sent", value: "SENT" },
+              { label: "Skipped", value: "SKIPPED" },
+              { label: "Failed", value: "FAILED" },
+              { label: "Queued", value: "QUEUED" },
+            ]}
+          />
         </div>
 
-        <div className="overflow-x-auto">
-          <table className="w-full text-sm text-left">
-            <thead className="bg-stone-50 dark:bg-stone-900/50 text-xs text-gray-500 uppercase">
-              <tr>
-                <th className="px-4 py-3">Waktu</th>
-                <th className="px-4 py-3">Member</th>
-                <th className="px-4 py-3">Nomor HP</th>
-                <th className="px-4 py-3">Template</th>
-                <th className="px-4 py-3">Status</th>
-                <th className="px-4 py-3">Catatan / Pesan</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-100 dark:divide-gray-800">
-              {data.logs.length === 0 ? (
-                <tr>
-                  <td colSpan={6} className="px-4 py-10 text-center text-gray-400">
-                    Belum ada log pengiriman WhatsApp.
-                  </td>
-                </tr>
-              ) : (
-                data.logs.map((log) => (
-                  <tr key={log.id} className="hover:bg-stone-50/50 dark:hover:bg-stone-900/30">
-                    <td className="px-4 py-3 text-xs text-gray-500 whitespace-nowrap">
-                      {new Date(log.createdAt).toLocaleString("id-ID", {
-                        day: "2-digit",
-                        month: "short",
-                        year: "numeric",
-                        hour: "2-digit",
-                        minute: "2-digit",
-                      })}
-                    </td>
-                    <td className="px-4 py-3">
-                      <div className="font-medium text-gray-900 dark:text-gray-100">
-                        {log.member.name}
-                      </div>
-                      <div className="text-xs font-mono text-gray-400">
-                        {log.member.code}
-                      </div>
-                    </td>
-                    <td className="px-4 py-3 text-xs font-mono text-gray-600 dark:text-gray-300 whitespace-nowrap">
-                      {formatPhoneDisplay(log.member.phone)}
-                    </td>
-                    <td className="px-4 py-3 text-xs font-mono text-gray-600 dark:text-gray-300">
-                      {log.templateName}
-                    </td>
-                    <td className="px-4 py-3 whitespace-nowrap">
-                      <StatusBadge status={log.status} />
-                    </td>
-                    <td className="px-4 py-3 text-xs text-gray-600 dark:text-gray-400 max-w-md">
-                      {log.waMessageId && (
-                        <span className="block font-mono text-[11px] text-emerald-700">
-                          ID: {log.waMessageId}
-                        </span>
-                      )}
-                      {log.error || "—"}
-                    </td>
-                  </tr>
-                ))
-              )}
-            </tbody>
-          </table>
-        </div>
+        <DataTable
+          columns={["Waktu", "Member", "Nomor HP", "Template", "Status", "Catatan"]}
+          isEmpty={data.logs.length === 0}
+          empty={
+            <EmptyState
+              icon={<MessageCircle size={24} />}
+              title="Belum ada log pengiriman WhatsApp"
+              description="Jalankan cron atau kirim uji ke satu nomor untuk melihat log."
+            />
+          }
+        >
+          {data.logs.map((log) => (
+            <tr key={log.id}>
+              <td className="px-3.5 py-3 text-[13px] text-[var(--mut)] whitespace-nowrap">
+                {new Date(log.createdAt).toLocaleString("id-ID", {
+                  day: "2-digit",
+                  month: "short",
+                  year: "numeric",
+                  hour: "2-digit",
+                  minute: "2-digit",
+                })}
+              </td>
+              <td className="px-3.5 py-3">
+                <b className="text-[var(--ink)]">{log.member.name}</b>
+                <div className="text-[12px] font-mono text-[var(--mut)]">
+                  {log.member.code}
+                </div>
+              </td>
+              <td className="px-3.5 py-3 text-[13px] font-mono text-[var(--mut)] whitespace-nowrap">
+                {formatPhoneDisplay(log.member.phone)}
+              </td>
+              <td className="px-3.5 py-3 text-[13px] font-mono text-[var(--ink)]">
+                {log.templateName}
+              </td>
+              <td className="px-3.5 py-3">
+                <StatusBadge status={log.status} />
+              </td>
+              <td className="px-3.5 py-3 text-[12.5px] text-[var(--mut)] max-w-md">
+                {log.waMessageId && (
+                  <span className="block font-mono text-[11.5px] text-[var(--brand)]">
+                    ID: {log.waMessageId}
+                  </span>
+                )}
+                {log.error || "—"}
+              </td>
+            </tr>
+          ))}
+        </DataTable>
 
-        {/* Pagination */}
         {data.pagination.totalPages > 1 && (
-          <div className="p-4 border-t border-gray-100 dark:border-gray-800 flex items-center justify-between text-xs text-gray-500">
+          <div className="pt-4 mt-2 border-t border-[var(--line)] flex items-center justify-between text-[12.5px] text-[var(--mut)]">
             <span>
               Halaman {data.pagination.page} dari {data.pagination.totalPages}
             </span>
             <div className="flex gap-2">
               <button
+                type="button"
                 disabled={data.pagination.page <= 1}
                 onClick={() => handlePageChange(data.pagination.page - 1)}
-                className="px-3 py-1.5 border rounded-lg disabled:opacity-40"
+                className="px-3 py-1.5 border border-[var(--line)] rounded-[10px] disabled:opacity-40 cursor-pointer"
               >
                 Sebelumnya
               </button>
               <button
+                type="button"
                 disabled={data.pagination.page >= data.pagination.totalPages}
                 onClick={() => handlePageChange(data.pagination.page + 1)}
-                className="px-3 py-1.5 border rounded-lg disabled:opacity-40"
+                className="px-3 py-1.5 border border-[var(--line)] rounded-[10px] disabled:opacity-40 cursor-pointer"
               >
                 Berikutnya
               </button>
@@ -481,4 +393,3 @@ export function WhatsappClient({ data, currentStatus }: DashboardProps) {
     </div>
   );
 }
-

@@ -7,20 +7,25 @@ import {
   ShoppingBag,
   Coins,
   Gift,
-  MessageCircle,
+  History,
   Trophy,
-  Activity,
-  ArrowRight,
+  MessageCircle,
 } from "lucide-react";
 import {
   ResponsiveContainer,
-  BarChart,
-  Bar,
+  AreaChart,
+  Area,
   XAxis,
   YAxis,
   Tooltip,
   CartesianGrid,
 } from "recharts";
+import {
+  PageHeader,
+  StatCard,
+  StatusPill,
+  EmptyState,
+} from "@/components/ui/kopi-ui";
 
 interface DashboardData {
   kpis: {
@@ -66,251 +71,293 @@ interface DashboardData {
   };
 }
 
-function LevelBadge({ level }: { level: string }) {
-  const cls =
-    level === "Platinum"
-      ? "bg-purple-100 text-purple-700"
-      : level === "Gold"
-      ? "bg-amber-100 text-amber-700"
-      : "bg-stone-100 text-stone-700";
-  return (
-    <span className={`text-[11px] font-semibold px-2 py-0.5 rounded-full ${cls}`}>
-      {level}
-    </span>
-  );
+function LevelPill({ level }: { level: string }) {
+  const variant =
+    level === "Platinum" ? "success" : level === "Gold" ? "warn" : "neutral";
+  return <StatusPill variant={variant}>{level}</StatusPill>;
 }
 
 export function DashboardClient({ data }: { data: DashboardData }) {
   const { kpis, chart7Days, topMembers, recentActivities, waSummary } = data;
 
+  const maxOmzet = Math.max(...chart7Days.map((d) => d.omzet), 0);
+  const peakDateKey =
+    maxOmzet > 0
+      ? chart7Days.find((d) => d.omzet === maxOmzet)?.dateKey
+      : undefined;
+
   return (
-    <div className="space-y-6">
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
-        <div>
-          <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">
-            Dashboard Admin
-          </h1>
-          <p className="text-sm text-gray-500 dark:text-gray-400">
-            Ringkasan performa loyalty Kopi Nuri hari ini &amp; 7 hari terakhir.
-          </p>
-        </div>
-        <Link
-          href="/admin/laporan"
-          className="inline-flex items-center gap-1.5 text-sm font-semibold text-kopi-green hover:underline"
+    <div>
+      <PageHeader
+        title="Dashboard admin"
+        subtitle="Performa loyalty Kopi Nuri hari ini dan 7 hari terakhir."
+        actions={
+          <Link
+            href="/admin/laporan"
+            className="inline-flex items-center gap-2 bg-[var(--btn)] text-white rounded-[12px] px-4 py-2.5 text-[14px] font-semibold hover:opacity-95 transition-opacity"
+          >
+            Buka laporan &amp; export
+          </Link>
+        }
+      />
+
+      {/* 4 StatCard */}
+      <section className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
+        <StatCard
+          label="Total member"
+          value={kpis.totalMembers.toLocaleString("id-ID")}
+          icon={<Users size={18} />}
+          sub={
+            <>
+              <span className="text-[var(--brand)] font-bold">
+                +{kpis.newMembersThisWeek}
+              </span>{" "}
+              member baru minggu ini ({kpis.activeMembers} aktif)
+            </>
+          }
+        />
+
+        <StatCard
+          label="Omzet hari ini"
+          value={formatRupiah(kpis.todayOmzet)}
+          icon={<ShoppingBag size={18} />}
+          sub={
+            <div className="flex flex-wrap gap-1.5 mt-1">
+              <span className="text-[12px] font-semibold px-2.5 py-0.5 rounded-full bg-[var(--mint)] text-[var(--brand)]">
+                Pagi {kpis.shiftSummary.PAGI.count}
+              </span>
+              <span className="text-[12px] font-semibold px-2.5 py-0.5 rounded-full bg-[var(--mint)] text-[var(--brand)]">
+                Siang {kpis.shiftSummary.SIANG.count}
+              </span>
+              <span className="text-[12px] font-semibold px-2.5 py-0.5 rounded-full bg-[var(--mint)] text-[var(--brand)]">
+                Malam {kpis.shiftSummary.MALAM.count}
+              </span>
+            </div>
+          }
+        />
+
+        <StatCard
+          label="Poin beredar"
+          value={`${kpis.pointsCirculating.toLocaleString("id-ID")} poin`}
+          icon={<Coins size={18} />}
+          sub="Akumulasi saldo seluruh member"
+        />
+
+        <StatCard
+          label="Poin ditukar"
+          value={`${kpis.pointsRedeemed.toLocaleString("id-ID")} poin`}
+          icon={<Gift size={18} />}
+          sub="Penukaran reward di kasir"
+        />
+      </section>
+
+      {/* Area Chart 7 Hari + Ringkasan WA */}
+      <section className="grid grid-cols-1 lg:grid-cols-[1.9fr_1fr] gap-4 mt-4">
+        <div
+          className="bg-[var(--card)] border border-[var(--line)] rounded-[20px] px-5 py-[18px]"
+          style={{ boxShadow: "var(--sh)" }}
         >
-          Buka Laporan &amp; Export <ArrowRight className="w-4 h-4" />
-        </Link>
-      </div>
-
-      {/* KPI Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
-        {/* Member */}
-        <div className="bg-white dark:bg-kopi-dark-card rounded-xl p-5 border border-gray-100 dark:border-gray-800">
-          <div className="flex items-center justify-between text-xs text-gray-500">
-            <span>Member Total</span>
-            <Users className="w-4 h-4 text-kopi-green" />
-          </div>
-          <p className="text-2xl font-bold text-gray-900 dark:text-gray-100 mt-1.5">
-            {kpis.totalMembers.toLocaleString("id-ID")}
-          </p>
-          <p className="text-xs text-emerald-600 mt-1 font-medium">
-            +{kpis.newMembersThisWeek} member baru minggu ini ({kpis.activeMembers} aktif)
-          </p>
-        </div>
-
-        {/* Transaksi & Omzet Hari Ini */}
-        <div className="bg-white dark:bg-kopi-dark-card rounded-xl p-5 border border-gray-100 dark:border-gray-800">
-          <div className="flex items-center justify-between text-xs text-gray-500">
-            <span>Omzet &amp; Transaksi Hari Ini</span>
-            <ShoppingBag className="w-4 h-4 text-kopi-green" />
-          </div>
-          <p className="text-2xl font-bold text-gray-900 dark:text-gray-100 mt-1.5">
-            {formatRupiah(kpis.todayOmzet)}
-          </p>
-          <div className="flex flex-wrap gap-1.5 mt-2 text-[11px]">
-            <span className="px-2 py-0.5 rounded bg-amber-50 text-amber-700 font-medium">
-              Pagi: {kpis.shiftSummary.PAGI.count}
-            </span>
-            <span className="px-2 py-0.5 rounded bg-emerald-50 text-emerald-700 font-medium">
-              Siang: {kpis.shiftSummary.SIANG.count}
-            </span>
-            <span className="px-2 py-0.5 rounded bg-indigo-50 text-indigo-700 font-medium">
-              Malam: {kpis.shiftSummary.MALAM.count}
-            </span>
-          </div>
-        </div>
-
-        {/* Poin Beredar */}
-        <div className="bg-white dark:bg-kopi-dark-card rounded-xl p-5 border border-gray-100 dark:border-gray-800">
-          <div className="flex items-center justify-between text-xs text-gray-500">
-            <span>Poin Beredar (Saldo Total)</span>
-            <Coins className="w-4 h-4 text-kopi-olive" />
-          </div>
-          <p className="text-2xl font-bold text-kopi-green dark:text-kopi-olive mt-1.5">
-            {kpis.pointsCirculating.toLocaleString("id-ID")} poin
-          </p>
-          <p className="text-xs text-gray-400 mt-1">
-            Akumulasi saldo seluruh member dari ledger
-          </p>
-        </div>
-
-        {/* Poin Ditukar */}
-        <div className="bg-white dark:bg-kopi-dark-card rounded-xl p-5 border border-gray-100 dark:border-gray-800">
-          <div className="flex items-center justify-between text-xs text-gray-500">
-            <span>Total Poin Ditukar</span>
-            <Gift className="w-4 h-4 text-kopi-coral" />
-          </div>
-          <p className="text-2xl font-bold text-gray-900 dark:text-gray-100 mt-1.5">
-            {kpis.pointsRedeemed.toLocaleString("id-ID")} poin
-          </p>
-          <p className="text-xs text-gray-400 mt-1">
-            Penukaran reward di kasir
-          </p>
-        </div>
-      </div>
-
-      {/* Chart 7 Hari + Ringkasan WA */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <div className="lg:col-span-2 bg-white dark:bg-kopi-dark-card rounded-xl p-5 border border-gray-100 dark:border-gray-800">
-          <div className="flex items-center justify-between mb-4">
+          <div className="flex items-center justify-between gap-2 mb-3.5">
             <div>
-              <h2 className="font-semibold text-gray-900 dark:text-gray-100">
-                Grafik Omzet 7 Hari Terakhir
+              <h2 className="text-[16px] font-bold text-[var(--ink)]">
+                Omzet 7 hari terakhir
               </h2>
-              <p className="text-xs text-gray-400">
-                Total nilai belanja member per hari (WIB)
-              </p>
+              <span className="text-[12.5px] text-[var(--mut)]">
+                Total belanja member per hari (WIB)
+              </span>
             </div>
           </div>
 
-          <div className="h-64 w-full">
+          <div className="h-[260px] w-full">
             <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={chart7Days} margin={{ top: 8, right: 8, left: 0, bottom: 0 }}>
-                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e5e7eb" />
+              <AreaChart
+                data={chart7Days}
+                margin={{ top: 14, right: 16, left: 0, bottom: 0 }}
+              >
+                <defs>
+                  <linearGradient id="kopiAreaGrad" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0%" stopColor="var(--chart)" stopOpacity={0.28} />
+                    <stop offset="100%" stopColor="var(--chart)" stopOpacity={0} />
+                  </linearGradient>
+                </defs>
+                <CartesianGrid
+                  strokeDasharray="4 5"
+                  vertical={false}
+                  stroke="var(--line)"
+                />
                 <XAxis
                   dataKey="label"
-                  tick={{ fontSize: 12, fill: "#6b7280" }}
+                  tick={{ fontSize: 11, fill: "var(--mut)" }}
                   axisLine={false}
                   tickLine={false}
                 />
                 <YAxis
-                  tick={{ fontSize: 11, fill: "#6b7280" }}
+                  tick={{ fontSize: 11, fill: "var(--mut)" }}
                   axisLine={false}
                   tickLine={false}
                   tickFormatter={(v: number) =>
-                    v >= 1000000
-                      ? `${(v / 1000000).toFixed(1)}jt`
-                      : v >= 1000
-                      ? `${Math.round(v / 1000)}rb`
+                    v >= 1_000_000
+                      ? `${(v / 1_000_000).toFixed(1)} jt`
+                      : v >= 1_000
+                      ? `${Math.round(v / 1_000)} rb`
                       : String(v)
                   }
                 />
                 <Tooltip
-                  formatter={(value: unknown, name: unknown) => {
-                    if (name === "omzet") return [formatRupiah(Number(value ?? 0)), "Omzet"];
-                    return [String(value ?? 0), String(name)];
-                  }}
+                  formatter={(value: unknown) => [
+                    formatRupiah(Number(value ?? 0)),
+                    "Omzet",
+                  ]}
+                  labelStyle={{ color: "#FFFFFF", fontWeight: 700 }}
+                  itemStyle={{ color: "#DDF3E4" }}
                   contentStyle={{
+                    backgroundColor: "var(--side)",
+                    border: "none",
                     borderRadius: "10px",
-                    borderColor: "#e5e7eb",
                     fontSize: "12px",
+                    color: "#FFFFFF",
+                    padding: "6px 10px",
                   }}
                 />
-                <Bar dataKey="omzet" fill="#1F5C2E" radius={[6, 6, 0, 0]} />
-              </BarChart>
+                <Area
+                  type="monotone"
+                  dataKey="omzet"
+                  stroke="var(--chart)"
+                  strokeWidth={3}
+                  fill="url(#kopiAreaGrad)"
+                  dot={(props) => {
+                    const { cx, cy, payload } = props as {
+                      cx?: number;
+                      cy?: number;
+                      payload?: { dateKey?: string };
+                    };
+                    if (
+                      cx === undefined ||
+                      cy === undefined ||
+                      !peakDateKey ||
+                      payload?.dateKey !== peakDateKey
+                    ) {
+                      return <g key={payload?.dateKey ?? "dot"} />;
+                    }
+                    return (
+                      <circle
+                        key={`peak-${payload.dateKey}`}
+                        cx={cx}
+                        cy={cy}
+                        r={7}
+                        fill="#F2506A"
+                        stroke="var(--card)"
+                        strokeWidth={3}
+                      />
+                    );
+                  }}
+                  activeDot={{
+                    r: 6,
+                    fill: "var(--chart)",
+                    stroke: "var(--card)",
+                    strokeWidth: 2,
+                  }}
+                />
+              </AreaChart>
             </ResponsiveContainer>
           </div>
         </div>
 
-        {/* Ringkasan WhatsApp 7 Hari */}
-        <div className="bg-white dark:bg-kopi-dark-card rounded-xl p-5 border border-gray-100 dark:border-gray-800 flex flex-col justify-between">
+        {/* Kartu WhatsApp 7 Hari */}
+        <div
+          className="bg-[var(--card)] border border-[var(--line)] rounded-[20px] px-5 py-[18px] flex flex-col justify-between"
+          style={{ boxShadow: "var(--sh)" }}
+        >
           <div>
-            <div className="flex items-center justify-between mb-4">
-              <h2 className="font-semibold text-gray-900 dark:text-gray-100 flex items-center gap-2">
-                <MessageCircle className="w-4 h-4 text-kopi-green" />
-                WhatsApp (7 Hari)
+            <div className="flex items-center justify-between gap-2 mb-3.5">
+              <h2 className="text-[16px] font-bold text-[var(--ink)] flex items-center gap-2">
+                <MessageCircle size={18} className="text-[var(--brand)]" />
+                WhatsApp (7 hari)
               </h2>
               <Link
                 href="/admin/whatsapp"
-                className="text-xs text-kopi-green font-medium hover:underline"
+                className="text-[13px] font-semibold text-[var(--brand)] hover:underline"
               >
-                Detail →
+                Detail
               </Link>
             </div>
 
-            <div className="space-y-3">
-              <div className="flex items-center justify-between p-3 rounded-lg bg-emerald-50/70 dark:bg-emerald-950/30">
-                <span className="text-xs font-medium text-emerald-800 dark:text-emerald-300">
-                  Terkirim (SENT)
-                </span>
-                <span className="text-lg font-bold text-emerald-700 dark:text-emerald-400">
-                  {waSummary.SENT}
-                </span>
+            <div className="space-y-2.5">
+              <div className="flex items-center justify-between px-3.5 py-3 rounded-[14px] font-semibold bg-[var(--mint)] text-[var(--brand)]">
+                <span>Terkirim</span>
+                <b className="text-[20px]">{waSummary.SENT}</b>
               </div>
-              <div className="flex items-center justify-between p-3 rounded-lg bg-amber-50/70 dark:bg-amber-950/30">
-                <span className="text-xs font-medium text-amber-800 dark:text-amber-300">
-                  Dilewati / Dry-Run (SKIPPED)
-                </span>
-                <span className="text-lg font-bold text-amber-700 dark:text-amber-400">
-                  {waSummary.SKIPPED}
-                </span>
+              <div className="flex items-center justify-between px-3.5 py-3 rounded-[14px] font-semibold bg-[var(--warnbg)] text-[var(--warn)]">
+                <span>Dilewati (dry-run)</span>
+                <b className="text-[20px]">{waSummary.SKIPPED}</b>
               </div>
-              <div className="flex items-center justify-between p-3 rounded-lg bg-red-50/70 dark:bg-red-950/30">
-                <span className="text-xs font-medium text-red-800 dark:text-red-300">
-                  Gagal (FAILED)
-                </span>
-                <span className="text-lg font-bold text-red-700 dark:text-red-400">
-                  {waSummary.FAILED}
-                </span>
+              <div className="flex items-center justify-between px-3.5 py-3 rounded-[14px] font-semibold bg-[var(--badbg)] text-[var(--bad)]">
+                <span>Gagal</span>
+                <b className="text-[20px]">{waSummary.FAILED}</b>
               </div>
             </div>
           </div>
 
-          <p className="text-[11px] text-gray-400 mt-4">
-            Total 7 hari terakhir: {waSummary.SENT + waSummary.SKIPPED + waSummary.FAILED} pesan diproses.
+          <p className="text-[12.5px] text-[var(--mut)] mt-3">
+            Total 7 hari:{" "}
+            {waSummary.SENT + waSummary.SKIPPED + waSummary.FAILED} pesan diproses.
           </p>
         </div>
-      </div>
+      </section>
 
-      {/* Top 5 Member & 5 Aktivitas Terbaru */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      {/* Top 5 Member + 5 Aktivitas Terbaru */}
+      <section className="grid grid-cols-1 lg:grid-cols-2 gap-4 mt-4">
         {/* Top 5 Member */}
-        <div className="bg-white dark:bg-kopi-dark-card rounded-xl p-5 border border-gray-100 dark:border-gray-800">
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="font-semibold text-gray-900 dark:text-gray-100 flex items-center gap-2">
-              <Trophy className="w-4 h-4 text-amber-500" />
-              Top 5 Member
+        <div
+          className="bg-[var(--card)] border border-[var(--line)] rounded-[20px] px-5 py-[18px]"
+          style={{ boxShadow: "var(--sh)" }}
+        >
+          <div className="flex items-center justify-between gap-2 mb-3.5">
+            <h2 className="text-[16px] font-bold text-[var(--ink)]">
+              Top 5 member
             </h2>
             <Link
               href="/admin/member"
-              className="text-xs text-kopi-green font-medium hover:underline"
+              className="text-[13px] font-semibold text-[var(--brand)] hover:underline"
             >
-              Semua member →
+              Semua member
             </Link>
           </div>
 
           {topMembers.length === 0 ? (
-            <p className="text-sm text-gray-400 py-8 text-center">
-              Belum ada data saldo member.
-            </p>
+            <EmptyState
+              icon={<Trophy size={24} />}
+              title="Belum ada peringkat member"
+              description="Daftarkan member dan catat transaksi pertama di kasir."
+            />
           ) : (
-            <div className="divide-y divide-gray-100 dark:divide-gray-800">
+            <div>
               {topMembers.map((m, idx) => (
-                <div key={m.id} className="py-3 flex items-center gap-3">
-                  <span className="w-6 h-6 rounded-full bg-stone-100 dark:bg-stone-800 text-xs font-bold flex items-center justify-center text-stone-600 dark:text-stone-300">
-                    {idx + 1}
-                  </span>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium text-gray-900 dark:text-gray-100 truncate">
-                      {m.name}
-                    </p>
-                    <p className="text-xs font-mono text-gray-400">{m.code}</p>
+                <div
+                  key={m.id}
+                  className="flex items-center gap-3 py-2.5 border-b border-[var(--line)] last:border-0"
+                >
+                  <div
+                    className={`w-9 h-9 rounded-full grid place-items-center font-extrabold shrink-0 ${
+                      idx === 0
+                        ? "bg-[var(--olive)] text-[#10331F]"
+                        : "bg-[var(--mint)] text-[var(--brand)]"
+                    }`}
+                  >
+                    {m.name.charAt(0).toUpperCase()}
                   </div>
-                  <LevelBadge level={m.level} />
-                  <span className="text-sm font-bold text-kopi-green dark:text-kopi-olive ml-2">
+                  <div className="flex-1 min-w-0">
+                    <div className="font-medium text-[var(--ink)] truncate">
+                      {m.name}
+                    </div>
+                    <small className="block text-[var(--mut)] text-[12px]">
+                      Peringkat {idx + 1} · {m.code}
+                    </small>
+                  </div>
+                  <LevelPill level={m.level} />
+                  <b className="text-[var(--ink)] whitespace-nowrap ml-1">
                     {m.balance.toLocaleString("id-ID")} poin
-                  </span>
+                  </b>
                 </div>
               ))}
             </div>
@@ -318,60 +365,67 @@ export function DashboardClient({ data }: { data: DashboardData }) {
         </div>
 
         {/* 5 Aktivitas Terbaru */}
-        <div className="bg-white dark:bg-kopi-dark-card rounded-xl p-5 border border-gray-100 dark:border-gray-800">
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="font-semibold text-gray-900 dark:text-gray-100 flex items-center gap-2">
-              <Activity className="w-4 h-4 text-kopi-green" />
-              5 Aktivitas Terbaru
+        <div
+          className="bg-[var(--card)] border border-[var(--line)] rounded-[20px] px-5 py-[18px]"
+          style={{ boxShadow: "var(--sh)" }}
+        >
+          <div className="flex items-center justify-between gap-2 mb-3.5">
+            <h2 className="text-[16px] font-bold text-[var(--ink)]">
+              5 aktivitas terbaru
             </h2>
             <Link
               href="/admin/riwayat"
-              className="text-xs text-kopi-green font-medium hover:underline"
+              className="text-[13px] font-semibold text-[var(--brand)] hover:underline"
             >
-              Lihat semua →
+              Lihat semua
             </Link>
           </div>
 
           {recentActivities.length === 0 ? (
-            <p className="text-sm text-gray-400 py-8 text-center">
-              Belum ada aktivitas poin.
-            </p>
+            <EmptyState
+              icon={<History size={24} />}
+              title="Belum ada aktivitas poin"
+              description="Aktivitas belanja, bonus, dan penukaran akan muncul di sini."
+            />
           ) : (
-            <div className="divide-y divide-gray-100 dark:divide-gray-800">
+            <div>
               {recentActivities.map((act) => (
-                <div key={act.id} className="py-3 flex items-center justify-between gap-3">
-                  <div className="min-w-0">
-                    <p className="text-sm font-medium text-gray-900 dark:text-gray-100 truncate">
-                      {act.member.name}{" "}
-                      <span className="text-xs font-mono text-gray-400">
-                        ({act.member.code})
-                      </span>
-                    </p>
-                    <p className="text-xs text-gray-500 truncate">
-                      {act.note || act.type} ·{" "}
+                <div
+                  key={act.id}
+                  className="flex items-center gap-3 py-2.5 border-b border-[var(--line)] last:border-0"
+                >
+                  <div className="w-9 h-9 rounded-[11px] bg-[var(--mint)] text-[var(--brand)] grid place-items-center shrink-0">
+                    <History size={18} />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="font-medium text-[var(--ink)] truncate">
+                      {act.member.name} — {act.note || act.type}
+                    </div>
+                    <small className="block text-[var(--mut)] text-[12px]">
                       {new Date(act.createdAt).toLocaleString("id-ID", {
                         day: "2-digit",
                         month: "short",
                         hour: "2-digit",
                         minute: "2-digit",
                       })}
-                    </p>
+                    </small>
                   </div>
-                  <span
-                    className={`text-sm font-bold shrink-0 ${
-                      act.points >= 0 ? "text-emerald-600" : "text-red-500"
+                  <b
+                    className={`whitespace-nowrap ${
+                      act.points >= 0
+                        ? "text-[var(--brand)]"
+                        : "text-[var(--bad)]"
                     }`}
                   >
                     {act.points >= 0 ? "+" : ""}
                     {act.points} poin
-                  </span>
+                  </b>
                 </div>
               ))}
             </div>
           )}
         </div>
-      </div>
+      </section>
     </div>
   );
 }
-

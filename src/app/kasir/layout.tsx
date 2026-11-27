@@ -1,7 +1,6 @@
 import { auth } from "@/lib/auth";
 import { redirect } from "next/navigation";
-import { Sidebar } from "@/components/sidebar";
-import { Header } from "@/components/header";
+import { AppShell } from "@/components/app-shell";
 import { Providers } from "@/components/providers";
 import type { Metadata } from "next";
 
@@ -27,14 +26,7 @@ export default async function KasirLayout({
 
   return (
     <Providers>
-      <div className="flex min-h-screen bg-gray-50 dark:bg-kopi-dark-bg">
-        <Sidebar role={sidebarRole} />
-        <div className="flex-1 flex flex-col">
-          <Header />
-          <main className="flex-1 p-6">{children}</main>
-        </div>
-      </div>
+      <AppShell role={sidebarRole}>{children}</AppShell>
     </Providers>
   );
 }
-

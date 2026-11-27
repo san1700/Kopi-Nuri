@@ -1,27 +1,19 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
-import Image from "next/image";
 import {
   TicketCheck,
-  Search,
   Camera,
   CheckCircle2,
   XCircle,
-  AlertCircle,
   Loader2,
-  Calendar,
-  Clock,
-  User,
-  Gift,
-  RefreshCw,
-  QrCode,
   ShieldCheck,
 } from "lucide-react";
 import { getVoucherDetail, validateAndUseVoucher } from "@/app/actions/redemption";
 import { CameraScannerModal } from "@/components/camera-scanner-modal";
 import { formatTanggalWaktu } from "@/lib/format";
 import { toast } from "sonner";
+import { PageHeader, StatusPill } from "@/components/ui/kopi-ui";
 
 interface VoucherDetailData {
   id: string;
@@ -109,7 +101,6 @@ export default function KasirValidasiVoucherPage() {
         toast.success(
           `Voucher "${voucher.voucherCode}" (${voucher.reward.name}) berhasil divalidasi dan ditandai sudah dipakai!`
         );
-        // Perbarui status voucher di tampilan
         setVoucher((prev) =>
           prev
             ? {
@@ -128,230 +119,106 @@ export default function KasirValidasiVoucherPage() {
   }
 
   return (
-    <div className="space-y-6 max-w-4xl mx-auto">
-      {/* Header Halaman */}
-      <div>
-        <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100 flex items-center gap-2">
-          <TicketCheck className="text-kopi-green dark:text-kopi-olive" />
-          Validasi Voucher Member
-        </h1>
-        <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
-          Scan QR voucher atau masukkan kode unik untuk memverifikasi dan menandai voucher yang telah digunakan
-        </p>
-      </div>
+    <div>
+      <PageHeader
+        title="Validasi voucher"
+        subtitle="Scan QR voucher atau masukkan kode unik untuk memverifikasi dan menandai voucher yang sudah dipakai."
+      />
 
-      {/* Input / Scanner Section */}
-      <div className="bg-white dark:bg-kopi-dark-card rounded-2xl p-5 border border-gray-100 dark:border-gray-800 shadow-xs space-y-4">
-        <div className="flex flex-col sm:flex-row gap-2.5">
-          <div className="relative flex-1">
-            <Search className="absolute left-3.5 top-3.5 text-gray-400" size={18} />
-            <input
-              ref={inputRef}
-              type="text"
-              value={codeInput}
-              onChange={(e) => setCodeInput(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === "Enter") {
-                  e.preventDefault();
-                  handleCheckVoucher();
-                }
-              }}
-              placeholder="Masukkan kode voucher (mis. KN-8K92MB) atau scan..."
-              className="w-full pl-10 pr-4 py-3 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl text-sm font-semibold tracking-wider text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-kopi-green focus:border-transparent transition-colors uppercase placeholder:normal-case placeholder:tracking-normal placeholder:font-normal"
-            />
-          </div>
-
-          <div className="flex gap-2">
-            <button
-              type="button"
-              onClick={() => handleCheckVoucher()}
-              disabled={searching}
-              className="px-5 py-3 bg-kopi-green hover:bg-kopi-green/90 text-white font-semibold text-xs rounded-xl shadow-xs flex items-center justify-center gap-1.5 transition-colors disabled:opacity-50 shrink-0"
-            >
-              {searching ? (
-                <Loader2 size={16} className="animate-spin" />
-              ) : (
-                <Search size={16} />
-              )}
-              Cek Voucher
-            </button>
-
-            <button
-              type="button"
-              onClick={() => setCameraModalOpen(true)}
-              className="px-4 py-3 bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-200 font-semibold text-xs rounded-xl flex items-center justify-center gap-1.5 transition-colors shrink-0"
-              title="Scan QR menggunakan Kamera"
-            >
-              <Camera size={16} />
-              <span className="hidden sm:inline">Scan Kamera</span>
-            </button>
-          </div>
-        </div>
-      </div>
-
-      {/* Kartu Detail Voucher */}
-      {voucher && (
-        <div className="bg-white dark:bg-kopi-dark-card rounded-2xl border border-gray-100 dark:border-gray-800 shadow-md overflow-hidden animate-in fade-in zoom-in-95 duration-200">
-          {/* Header Status Bar */}
-          <div
-            className={`px-6 py-4 flex items-center justify-between border-b ${
-              voucher.status === "UNUSED"
-                ? "bg-emerald-50 dark:bg-emerald-950/40 border-emerald-200 dark:border-emerald-800/80 text-emerald-800 dark:text-emerald-200"
-                : "bg-red-50 dark:bg-red-950/40 border-red-200 dark:border-red-800/80 text-red-800 dark:text-red-200"
-            }`}
+      {/* Satu kartu utama */}
+      <div
+        className="bg-[var(--card)] border border-[var(--line)] rounded-[20px] px-5 py-5 max-w-[860px]"
+        style={{ boxShadow: "var(--sh)" }}
+      >
+        <div className="flex flex-wrap items-center gap-2.5">
+          <input
+            ref={inputRef}
+            type="text"
+            value={codeInput}
+            onChange={(e) => setCodeInput(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") {
+                e.preventDefault();
+                handleCheckVoucher();
+              }
+            }}
+            placeholder="Masukkan kode voucher (mis. KN-8K92MB) atau scan"
+            className="flex-1 min-w-[240px] text-[17px] px-[18px] py-4 border-2 border-[var(--brand)] bg-[var(--in)] text-[var(--ink)] rounded-[16px] uppercase placeholder:normal-case focus:outline-none focus:ring-3 focus:ring-[var(--mint)]"
+          />
+          <button
+            type="button"
+            onClick={() => handleCheckVoucher()}
+            disabled={searching}
+            className="inline-flex items-center gap-2 bg-[var(--btn)] text-white rounded-[12px] px-4 py-3.5 text-[14px] font-semibold cursor-pointer disabled:opacity-50"
           >
-            <div className="flex items-center gap-2 font-bold text-sm">
-              {voucher.status === "UNUSED" ? (
-                <>
-                  <CheckCircle2 size={18} className="text-emerald-600 dark:text-emerald-400" />
-                  <span>VOUCHER AKTIF (BELUM DIGUNAKAN)</span>
-                </>
-              ) : (
-                <>
-                  <XCircle size={18} className="text-red-600 dark:text-red-400" />
-                  <span>VOUCHER SUDAH DIGUNAKAN</span>
-                </>
-              )}
+            {searching ? <Loader2 size={17} className="animate-spin" /> : <TicketCheck size={17} />}
+            Cek voucher
+          </button>
+          <button
+            type="button"
+            onClick={() => setCameraModalOpen(true)}
+            className="inline-flex items-center gap-2 border border-[var(--line)] bg-[var(--card)] text-[var(--ink)] rounded-[12px] px-4 py-3.5 text-[14px] font-semibold cursor-pointer"
+            style={{ boxShadow: "var(--sh)" }}
+          >
+            <Camera size={17} />
+            Scan kamera
+          </button>
+        </div>
+
+        {/* Detail Voucher */}
+        {voucher && (
+          <div className="mt-6 pt-5 border-t border-[var(--line)] flex flex-col sm:flex-row gap-5 items-start">
+            <div className="bg-white p-2 rounded-[14px] border border-[var(--line)] shrink-0">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src={voucher.qrDataUrl} alt={voucher.voucherCode} className="w-28 h-28" />
             </div>
 
-            <span className="text-xs font-mono font-bold tracking-widest px-2.5 py-1 rounded-md bg-white/70 dark:bg-black/30 border">
-              {voucher.voucherCode}
-            </span>
-          </div>
-
-          <div className="p-6 grid grid-cols-1 md:grid-cols-3 gap-6">
-            {/* Kolom Kiri: QR Code Kecil */}
-            <div className="flex flex-col items-center justify-center p-4 bg-gray-50 dark:bg-gray-800/60 rounded-xl border border-gray-100 dark:border-gray-700">
-              <div className="bg-white p-2.5 rounded-lg shadow-xs border">
-                {voucher.qrDataUrl ? (
-                  <Image
-                    src={voucher.qrDataUrl}
-                    alt={voucher.voucherCode}
-                    width={140}
-                    height={140}
-                    unoptimized
-                    className="w-[140px] h-[140px] block"
-                  />
+            <div className="flex-1 space-y-2.5 min-w-0">
+              <div className="flex flex-wrap items-center gap-2">
+                <span className="font-mono text-[18px] font-extrabold text-[var(--ink)]">
+                  {voucher.voucherCode}
+                </span>
+                {voucher.status === "UNUSED" ? (
+                  <StatusPill variant="success">
+                    <CheckCircle2 size={13} /> Belum dipakai
+                  </StatusPill>
                 ) : (
-                  <div className="w-[140px] h-[140px] flex items-center justify-center bg-gray-100 text-gray-400">
-                    <QrCode size={48} />
-                  </div>
+                  <StatusPill variant="danger">
+                    <XCircle size={13} /> Sudah dipakai
+                  </StatusPill>
                 )}
               </div>
-              <p className="font-mono text-base font-extrabold tracking-widest text-gray-900 dark:text-gray-100 mt-3">
-                {voucher.voucherCode}
-              </p>
-              <p className="text-[11px] text-gray-400">Kode Unik Voucher</p>
-            </div>
 
-            {/* Kolom Tengah & Kanan: Detail Reward & Member */}
-            <div className="md:col-span-2 space-y-4">
-              {/* Box Info Reward */}
-              <div className="p-4 bg-gray-50 dark:bg-gray-800/40 rounded-xl border border-gray-100 dark:border-gray-800">
-                <div className="flex items-center gap-2 text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1">
-                  <Gift size={14} className="text-kopi-green" />
-                  <span>Reward Produk</span>
-                </div>
-                <h3 className="text-lg font-extrabold text-gray-900 dark:text-gray-100">
-                  {voucher.reward.name}
-                </h3>
-                <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
-                  {voucher.reward.description || "Reward loyalty Kopi Nuri"}
+              <div className="text-[16px] font-bold text-[var(--brand)]">
+                {voucher.reward.name} ({voucher.pointsSpent} poin)
+              </div>
+
+              <div className="text-[13px] text-[var(--mut)] space-y-0.5">
+                <p>
+                  Member: <b className="text-[var(--ink)]">{voucher.member.name}</b> ({voucher.member.code})
                 </p>
-                <div className="mt-2 text-xs font-semibold text-kopi-green dark:text-kopi-olive">
-                  Poin Ditukar: {voucher.pointsSpent} pts
-                </div>
+                <p>Diterbitkan: {formatTanggalWaktu(voucher.createdAt)}</p>
+                {voucher.usedAt && <p>Dipakai pada: {formatTanggalWaktu(voucher.usedAt)}</p>}
               </div>
 
-              {/* Box Info Member & Tanggal */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
-                <div className="p-3 bg-gray-50 dark:bg-gray-800/40 rounded-xl border border-gray-100 dark:border-gray-800">
-                  <span className="text-gray-400 flex items-center gap-1.5 mb-1">
-                    <User size={13} />
-                    <span>Member Pemilik</span>
-                  </span>
-                  <p className="font-bold text-gray-900 dark:text-gray-100">
-                    {voucher.member.name}
-                  </p>
-                  <p className="font-mono text-[11px] text-kopi-green font-semibold">
-                    {voucher.member.code} • {voucher.member.phone}
-                  </p>
-                </div>
-
-                <div className="p-3 bg-gray-50 dark:bg-gray-800/40 rounded-xl border border-gray-100 dark:border-gray-800">
-                  <span className="text-gray-400 flex items-center gap-1.5 mb-1">
-                    <Calendar size={13} />
-                    <span>Waktu Penukaran</span>
-                  </span>
-                  <p className="font-semibold text-gray-900 dark:text-gray-100">
-                    {formatTanggalWaktu(voucher.createdAt)}
-                  </p>
-                </div>
-              </div>
-
-              {/* Riwayat Penggunaan Jika Sudah USED */}
-              {voucher.status === "USED" && (
-                <div className="p-3.5 bg-red-50 dark:bg-red-950/40 border border-red-200 dark:border-red-800 rounded-xl text-xs space-y-1">
-                  <div className="flex items-center gap-1.5 font-bold text-red-700 dark:text-red-300">
-                    <AlertCircle size={15} />
-                    <span>Informasi Validasi Penggunaan:</span>
-                  </div>
-                  <p className="text-red-600 dark:text-red-300">
-                    Digunakan pada:{" "}
-                    <strong>{voucher.usedAt ? formatTanggalWaktu(voucher.usedAt) : "—"}</strong>
-                  </p>
-                  <p className="text-red-600 dark:text-red-300">
-                    Divalidasi oleh:{" "}
-                    <strong>{voucher.usedBy?.name || "Kasir"}</strong>
-                  </p>
-                </div>
-              )}
-
-              {/* Action Button: Tandai Sudah Dipakai */}
-              <div className="pt-2 flex flex-col sm:flex-row gap-3">
-                {voucher.status === "UNUSED" ? (
+              {voucher.status === "UNUSED" && (
+                <div className="pt-2">
                   <button
                     type="button"
                     onClick={handleMarkAsUsed}
                     disabled={validating}
-                    className="flex-1 py-3 px-5 bg-kopi-green hover:bg-kopi-green/90 text-white font-bold text-sm rounded-xl shadow-xs flex items-center justify-center gap-2 transition-all active:scale-98 disabled:opacity-50"
+                    className="inline-flex items-center gap-2 bg-[var(--btn)] text-white rounded-[12px] px-5 py-2.5 text-[14px] font-semibold cursor-pointer disabled:opacity-50"
                   >
-                    {validating ? (
-                      <>
-                        <Loader2 size={16} className="animate-spin" />
-                        Memvalidasi...
-                      </>
-                    ) : (
-                      <>
-                        <ShieldCheck size={18} />
-                        Tandai Sudah Dipakai (Validasi)
-                      </>
-                    )}
+                    {validating ? <Loader2 size={17} className="animate-spin" /> : <ShieldCheck size={17} />}
+                    Tandai sudah dipakai
                   </button>
-                ) : (
-                  <div className="w-full py-3 px-4 bg-gray-100 dark:bg-gray-800 text-gray-400 dark:text-gray-500 rounded-xl text-xs font-semibold text-center border border-gray-200 dark:border-gray-700">
-                    ⛔ Voucher sudah tidak berlaku lagi karena telah digunakan
-                  </div>
-                )}
-
-                <button
-                  type="button"
-                  onClick={() => {
-                    setVoucher(null);
-                    setCodeInput("");
-                    inputRef.current?.focus();
-                  }}
-                  className="py-3 px-4 border border-gray-200 dark:border-gray-700 text-xs font-semibold text-gray-600 dark:text-gray-300 rounded-xl hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
-                >
-                  Cek Voucher Lain
-                </button>
-              </div>
+                </div>
+              )}
             </div>
           </div>
-        </div>
-      )}
+        )}
+      </div>
 
-      {/* Modal Scanner Kamera */}
       {cameraModalOpen && (
         <CameraScannerModal
           onScan={handleCameraScanSuccess}
@@ -361,4 +228,3 @@ export default function KasirValidasiVoucherPage() {
     </div>
   );
 }
-

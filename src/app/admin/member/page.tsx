@@ -3,7 +3,6 @@
 import { useState, useEffect, useCallback } from "react";
 import {
   Users,
-  Search,
   UserPlus,
   QrCode,
   Edit,
@@ -20,6 +19,12 @@ import { formatTanggal } from "@/lib/format";
 import { formatPhoneDisplay } from "@/lib/phone";
 import { MemberLevel } from "@/lib/points";
 import { toast } from "sonner";
+import {
+  PageHeader,
+  DataTable,
+  StatusPill,
+  EmptyState,
+} from "@/components/ui/kopi-ui";
 
 interface MemberItem {
   id: string;
@@ -45,13 +50,11 @@ export default function AdminMemberPage() {
   const [totalPages, setTotalPages] = useState(1);
   const [totalCount, setTotalCount] = useState(0);
 
-  // Modal states
   const [selectedForCard, setSelectedForCard] = useState<MemberItem | null>(null);
   const [formModalOpen, setFormModalOpen] = useState(false);
   const [editingMember, setEditingMember] = useState<MemberItem | null>(null);
   const [togglingId, setTogglingId] = useState<string | null>(null);
 
-  // Debounce search input
   useEffect(() => {
     const timer = setTimeout(() => {
       setDebouncedSearch(search);
@@ -111,216 +114,181 @@ export default function AdminMemberPage() {
     }
   }
 
-  const levelBadges: Record<MemberLevel, string> = {
-    Silver: "bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300 border-slate-200 dark:border-slate-700",
-    Gold: "bg-amber-50 text-amber-800 dark:bg-amber-950/60 dark:text-amber-300 border-amber-200 dark:border-amber-800",
-    Platinum: "bg-emerald-50 text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-300 border-emerald-200 dark:border-emerald-800 font-bold",
-  };
+  function levelVariant(level: MemberLevel) {
+    if (level === "Platinum") return "success" as const;
+    if (level === "Gold") return "warn" as const;
+    return "neutral" as const;
+  }
 
   return (
-    <div className="space-y-6">
-      {/* Top Bar Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100 flex items-center gap-2">
-            <Users className="text-kopi-green dark:text-kopi-olive" />
-            Data Member
-          </h1>
-          <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
-            Total {totalCount} member terdaftar di program loyalty Kopi Nuri
-          </p>
-        </div>
+    <div>
+      <PageHeader
+        title="Data member"
+        subtitle={`Total ${totalCount} member terdaftar di program loyalty Kopi Nuri.`}
+        actions={
+          <button
+            type="button"
+            onClick={() => {
+              setEditingMember(null);
+              setFormModalOpen(true);
+            }}
+            className="inline-flex items-center gap-2 bg-[var(--btn)] text-white rounded-[12px] px-4 py-2.5 text-[14px] font-semibold cursor-pointer hover:opacity-95 transition-opacity"
+          >
+            <UserPlus size={17} />
+            Tambah member baru
+          </button>
+        }
+      />
 
-        <button
-          onClick={() => {
-            setEditingMember(null);
-            setFormModalOpen(true);
-          }}
-          className="flex items-center justify-center gap-2 px-4 py-2.5 bg-kopi-green hover:bg-kopi-green/90 text-white rounded-xl font-semibold text-sm shadow-xs transition-colors self-start sm:self-auto"
-        >
-          <UserPlus size={18} />
-          Tambah Member Baru
-        </button>
-      </div>
-
-      {/* Filter & Pencarian */}
-      <div className="bg-white dark:bg-kopi-dark-card rounded-2xl p-4 border border-gray-100 dark:border-gray-800 flex flex-col sm:flex-row gap-3 items-center justify-between shadow-xs">
-        <div className="relative w-full sm:w-96">
-          <Search className="absolute left-3.5 top-3 text-gray-400" size={18} />
+      {/* Pencarian & Segarkan */}
+      <div
+        className="bg-[var(--card)] border border-[var(--line)] rounded-[20px] px-5 py-4"
+        style={{ boxShadow: "var(--sh)" }}
+      >
+        <div className="flex flex-wrap items-center gap-2.5">
           <input
             type="text"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            placeholder="Cari nama, kode (MBR-...), atau nomor HP..."
-            className="w-full pl-10 pr-4 py-2 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl text-sm text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-kopi-green focus:border-transparent transition-colors"
+            placeholder="Cari nama, kode (MBR-…), atau nomor HP"
+            className="flex-1 min-w-[220px] border border-[var(--line)] bg-[var(--in)] text-[var(--ink)] rounded-[12px] px-3.5 py-2.5 text-[14px] focus:outline-none focus:border-[var(--brand)]"
           />
+          <button
+            type="button"
+            onClick={() => loadData()}
+            disabled={loading}
+            className="inline-flex items-center gap-2 border border-[var(--line)] bg-[var(--card)] text-[var(--ink)] rounded-[12px] px-3.5 py-2.5 text-[14px] font-semibold cursor-pointer disabled:opacity-50"
+            style={{ boxShadow: "var(--sh)" }}
+          >
+            <RefreshCw size={16} className={loading ? "animate-spin" : ""} />
+            Segarkan
+          </button>
         </div>
-
-        <button
-          onClick={() => loadData()}
-          disabled={loading}
-          className="flex items-center gap-2 px-3 py-2 text-xs font-medium text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-colors"
-          title="Muat ulang data"
-        >
-          <RefreshCw size={14} className={loading ? "animate-spin" : ""} />
-          Segarkan
-        </button>
       </div>
 
       {/* Tabel Member */}
-      <div className="bg-white dark:bg-kopi-dark-card rounded-2xl border border-gray-100 dark:border-gray-800 overflow-hidden shadow-xs">
-        <div className="overflow-x-auto">
-          <table className="w-full text-left text-sm">
-            <thead className="bg-gray-50/75 dark:bg-gray-800/50 text-gray-500 dark:text-gray-400 text-xs uppercase tracking-wider border-b border-gray-100 dark:border-gray-800">
-              <tr>
-                <th className="px-5 py-3.5">Kode</th>
-                <th className="px-5 py-3.5">Nama &amp; Kontak</th>
-                <th className="px-5 py-3.5 text-right">Saldo Poin</th>
-                <th className="px-5 py-3.5">Level</th>
-                <th className="px-5 py-3.5">Sumber</th>
-                <th className="px-5 py-3.5">Status</th>
-                <th className="px-5 py-3.5">Terdaftar</th>
-                <th className="px-5 py-3.5 text-center">Aksi</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-100 dark:divide-gray-800 text-gray-700 dark:text-gray-200">
-              {loading ? (
-                <tr>
-                  <td colSpan={8} className="px-5 py-12 text-center text-gray-500">
-                    <Loader2 size={24} className="animate-spin mx-auto mb-2 text-kopi-green" />
-                    Memuat data member...
-                  </td>
-                </tr>
-              ) : members.length === 0 ? (
-                <tr>
-                  <td colSpan={8} className="px-5 py-12 text-center text-gray-500">
-                    Tidak ada member yang ditemukan.
-                  </td>
-                </tr>
-              ) : (
-                members.map((m) => (
-                  <tr
-                    key={m.id}
-                    className="hover:bg-gray-50/50 dark:hover:bg-gray-800/30 transition-colors"
-                  >
-                    {/* Kode Member */}
-                    <td className="px-5 py-4 font-mono font-bold text-xs text-kopi-green dark:text-kopi-olive">
-                      {m.code}
-                    </td>
-
-                    {/* Nama & Kontak */}
-                    <td className="px-5 py-4">
-                      <p className="font-semibold text-gray-900 dark:text-gray-100">{m.name}</p>
-                      <p className="text-xs text-gray-500 dark:text-gray-400">
-                        {formatPhoneDisplay(m.phone)}
-                      </p>
-                    </td>
-
-                    {/* Saldo Poin */}
-                    <td className="px-5 py-4 text-right">
-                      <span className="font-bold text-sm text-gray-900 dark:text-gray-100">
-                        {m.balance.toLocaleString("id-ID")}
-                      </span>
-                      <span className="text-xs text-gray-400 ml-1">pts</span>
-                    </td>
-
-                    {/* Level */}
-                    <td className="px-5 py-4">
-                      <span
-                        className={`inline-block px-2.5 py-0.5 rounded-full text-xs border ${levelBadges[m.level]}`}
-                      >
-                        {m.level}
-                      </span>
-                    </td>
-
-                    {/* Sumber */}
-                    <td className="px-5 py-4 text-xs text-gray-500">
-                      {m.source === "ADMIN" ? "Admin" : "Daftar Mandiri"}
-                    </td>
-
-                    {/* Status */}
-                    <td className="px-5 py-4">
-                      <span
-                        className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                          m.isActive
-                            ? "bg-emerald-50 text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-300"
-                            : "bg-red-50 text-red-700 dark:bg-red-950/60 dark:text-red-300"
-                        }`}
-                      >
-                        <span
-                          className={`w-1.5 h-1.5 rounded-full ${
-                            m.isActive ? "bg-emerald-500" : "bg-red-500"
-                          }`}
-                        />
-                        {m.isActive ? "Aktif" : "Nonaktif"}
-                      </span>
-                    </td>
-
-                    {/* Terdaftar */}
-                    <td className="px-5 py-4 text-xs text-gray-500">
-                      {formatTanggal(m.createdAt)}
-                    </td>
-
-                    {/* Aksi */}
-                    <td className="px-5 py-4">
-                      <div className="flex items-center justify-center gap-1">
-                        <button
-                          onClick={() => setSelectedForCard(m)}
-                          className="p-1.5 text-gray-500 hover:text-kopi-green dark:hover:text-kopi-olive hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-colors"
-                          title="Lihat &amp; Cetak Kartu QR"
-                        >
-                          <QrCode size={16} />
-                        </button>
-                        <button
-                          onClick={() => {
-                            setEditingMember(m);
-                            setFormModalOpen(true);
-                          }}
-                          className="p-1.5 text-gray-500 hover:text-blue-600 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-colors"
-                          title="Edit Data Member"
-                        >
-                          <Edit size={16} />
-                        </button>
-                        <button
-                          onClick={() => handleToggleActive(m)}
-                          disabled={togglingId === m.id}
-                          className={`p-1.5 rounded-lg transition-colors ${
-                            m.isActive
-                              ? "text-gray-400 hover:text-kopi-coral hover:bg-red-50 dark:hover:bg-red-950/40"
-                              : "text-kopi-coral hover:text-emerald-600 hover:bg-emerald-50 dark:hover:bg-emerald-950/40"
-                          }`}
-                          title={m.isActive ? "Nonaktifkan Member" : "Aktifkan Member"}
-                        >
-                          <Power size={16} />
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                ))
-              )}
-            </tbody>
-          </table>
-        </div>
-
-        {/* Pagination Footer */}
-        <div className="px-5 py-3.5 border-t border-gray-100 dark:border-gray-800 flex items-center justify-between text-xs text-gray-500 dark:text-gray-400">
-          <div>
-            Menampilkan halaman <span className="font-semibold text-gray-700 dark:text-gray-300">{page}</span> dari{" "}
-            <span className="font-semibold text-gray-700 dark:text-gray-300">{totalPages || 1}</span>
+      <div
+        className="bg-[var(--card)] border border-[var(--line)] rounded-[20px] px-5 py-[18px] mt-4"
+        style={{ boxShadow: "var(--sh)" }}
+      >
+        {loading ? (
+          <div className="py-12 text-center text-[var(--mut)]">
+            <Loader2 size={24} className="animate-spin mx-auto mb-2 text-[var(--brand)]" />
+            Memuat data member...
           </div>
+        ) : (
+          <DataTable
+            columns={[
+              "Kode",
+              "Nama & kontak",
+              "Saldo poin",
+              "Level",
+              "Sumber",
+              "Status",
+              "Terdaftar",
+              "Aksi",
+            ]}
+            isEmpty={members.length === 0}
+            empty={
+              <EmptyState
+                icon={<Users size={24} />}
+                title="Belum ada member"
+                description="Klik “Tambah member baru” untuk mendaftarkan yang pertama."
+              />
+            }
+          >
+            {members.map((m) => (
+              <tr key={m.id} className="hover:bg-[var(--bg)]/50 transition-colors">
+                <td className="px-3.5 py-3 font-mono font-bold text-[13px] text-[var(--brand)] whitespace-nowrap">
+                  {m.code}
+                </td>
+                <td className="px-3.5 py-3">
+                  <b className="text-[var(--ink)]">{m.name}</b>
+                  <div className="text-[12.5px] text-[var(--mut)]">
+                    {formatPhoneDisplay(m.phone)}
+                  </div>
+                </td>
+                <td className="px-3.5 py-3 font-bold text-[var(--ink)] whitespace-nowrap">
+                  {m.balance.toLocaleString("id-ID")}
+                </td>
+                <td className="px-3.5 py-3">
+                  <StatusPill variant={levelVariant(m.level)}>{m.level}</StatusPill>
+                </td>
+                <td className="px-3.5 py-3 text-[13px] text-[var(--mut)] whitespace-nowrap">
+                  {m.source === "ADMIN" ? "Kasir" : "Mandiri"}
+                </td>
+                <td className="px-3.5 py-3">
+                  <StatusPill variant={m.isActive ? "success" : "neutral"}>
+                    {m.isActive ? "Aktif" : "Nonaktif"}
+                  </StatusPill>
+                </td>
+                <td className="px-3.5 py-3 text-[13px] text-[var(--mut)] whitespace-nowrap">
+                  {formatTanggal(m.createdAt)}
+                </td>
+                <td className="px-3.5 py-3">
+                  <div className="flex items-center gap-1">
+                    <button
+                      type="button"
+                      onClick={() => setSelectedForCard(m)}
+                      className="p-2 rounded-[10px] text-[var(--mut)] hover:text-[var(--brand)] hover:bg-[var(--mint)] transition-colors cursor-pointer"
+                      title="Lihat & Cetak Kartu QR"
+                    >
+                      <QrCode size={16} />
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setEditingMember(m);
+                        setFormModalOpen(true);
+                      }}
+                      className="p-2 rounded-[10px] text-[var(--mut)] hover:text-[var(--ink)] hover:bg-[var(--bg)] transition-colors cursor-pointer"
+                      title="Edit Data Member"
+                    >
+                      <Edit size={16} />
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handleToggleActive(m)}
+                      disabled={togglingId === m.id}
+                      className={`p-2 rounded-[10px] transition-colors cursor-pointer ${
+                        m.isActive
+                          ? "text-[var(--mut)] hover:text-[var(--bad)] hover:bg-[var(--badbg)]"
+                          : "text-[var(--bad)] hover:text-[var(--brand)] hover:bg-[var(--mint)]"
+                      }`}
+                      title={m.isActive ? "Nonaktifkan Member" : "Aktifkan Member"}
+                    >
+                      <Power size={16} />
+                    </button>
+                  </div>
+                </td>
+              </tr>
+            ))}
+          </DataTable>
+        )}
+
+        {/* Paginasi */}
+        <div className="pt-4 mt-2 border-t border-[var(--line)] flex items-center justify-between text-[12.5px] text-[var(--mut)]">
+          <span>
+            Menampilkan halaman <b className="text-[var(--ink)]">{page}</b> dari{" "}
+            <b className="text-[var(--ink)]">{totalPages || 1}</b>
+          </span>
 
           <div className="flex gap-2">
             <button
+              type="button"
               onClick={() => setPage((p) => Math.max(1, p - 1))}
               disabled={page <= 1 || loading}
-              className="p-1.5 border border-gray-200 dark:border-gray-700 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800 disabled:opacity-40 transition-colors"
+              className="p-2 border border-[var(--line)] rounded-[10px] bg-[var(--card)] text-[var(--ink)] disabled:opacity-40 cursor-pointer"
+              aria-label="Halaman sebelumnya"
             >
               <ChevronLeft size={16} />
             </button>
             <button
+              type="button"
               onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
               disabled={page >= totalPages || loading}
-              className="p-1.5 border border-gray-200 dark:border-gray-700 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800 disabled:opacity-40 transition-colors"
+              className="p-2 border border-[var(--line)] rounded-[10px] bg-[var(--card)] text-[var(--ink)] disabled:opacity-40 cursor-pointer"
+              aria-label="Halaman berikutnya"
             >
               <ChevronRight size={16} />
             </button>
@@ -328,7 +296,6 @@ export default function AdminMemberPage() {
         </div>
       </div>
 
-      {/* Modal Kartu Member */}
       {selectedForCard && (
         <MemberCardModal
           member={selectedForCard}
@@ -336,7 +303,6 @@ export default function AdminMemberPage() {
         />
       )}
 
-      {/* Modal Form Tambah / Edit */}
       {formModalOpen && (
         <MemberFormModal
           initialData={editingMember}

@@ -4,6 +4,7 @@ import { useState } from "react";
 import { signIn } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
+import { Loader2 } from "lucide-react";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -38,74 +39,65 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-kopi-cream dark:bg-kopi-dark-bg px-4">
-      <div className="w-full max-w-sm">
-        {/* Logo */}
-        <div className="flex justify-center mb-8">
-          <Image
-            src="/logo.png"
-            alt="Kopi Nuri"
-            width={180}
-            height={180}
-            priority
-            className="object-contain"
-          />
+    <div className="min-h-screen flex items-center justify-center bg-[var(--side)] px-4 py-8">
+      <div className="w-full max-w-[380px]">
+        {/* Logo di atas kartu */}
+        <div className="flex flex-col items-center mb-6">
+          <div className="w-16 h-16 rounded-[16px] bg-white p-1.5 shadow-md flex items-center justify-center">
+            <Image
+              src="/logo.png"
+              alt="Logo Kopi Nuri"
+              width={56}
+              height={56}
+              priority
+              className="object-contain"
+            />
+          </div>
+          <b className="text-white text-[18px] font-extrabold mt-3">Kopi Nuri</b>
+          <span className="text-[#8FB09A] text-[13px]">Sistem Poin Member</span>
         </div>
 
-        {/* Card */}
-        <div className="bg-white dark:bg-kopi-dark-card rounded-2xl shadow-lg p-8">
-          <h1 className="text-xl font-bold text-center text-kopi-green dark:text-kopi-olive mb-6">
-            Masuk ke Sistem
+        {/* Kartu putih di tengah */}
+        <div className="bg-[var(--card)] border border-[var(--line)] rounded-[20px] p-7 shadow-xl">
+          <h1 className="text-[20px] font-extrabold text-[var(--ink)] text-center mb-1">
+            Masuk ke sistem
           </h1>
+          <p className="text-[13px] text-[var(--mut)] text-center mb-5">
+            Gunakan akun Admin atau Kasir
+          </p>
 
           <form onSubmit={handleSubmit} className="space-y-4">
-            <div>
-              <label
-                htmlFor="username"
-                className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1"
-              >
-                Username
-              </label>
+            <label className="grid gap-1.5 font-semibold text-[13px] text-[var(--ink)]">
+              <span>Username</span>
               <input
                 id="username"
                 type="text"
                 value={username}
                 onChange={(e) => setUsername(e.target.value)}
-                className="w-full px-4 py-3 rounded-lg border border-gray-200 dark:border-gray-700
-                           bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-gray-100
-                           focus:ring-2 focus:ring-kopi-green focus:border-transparent
-                           transition-colors"
+                className="border border-[var(--line)] bg-[var(--in)] text-[var(--ink)] rounded-[12px] px-3.5 py-2.5 text-[14px] focus:outline-none focus:border-[var(--brand)]"
                 placeholder="Masukkan username"
                 autoComplete="username"
                 required
                 autoFocus
               />
-            </div>
+            </label>
 
-            <div>
-              <label
-                htmlFor="password"
-                className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1"
-              >
-                Password
-              </label>
+            <label className="grid gap-1.5 font-semibold text-[13px] text-[var(--ink)]">
+              <span>Password</span>
               <input
                 id="password"
                 type="password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                className="w-full px-4 py-3 rounded-lg border border-gray-200 dark:border-gray-700
-                           bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-gray-100
-                           focus:ring-2 focus:ring-kopi-green focus:border-transparent
-                           transition-colors"
+                className="border border-[var(--line)] bg-[var(--in)] text-[var(--ink)] rounded-[12px] px-3.5 py-2.5 text-[14px] focus:outline-none focus:border-[var(--brand)]"
                 placeholder="Masukkan password"
                 autoComplete="current-password"
                 required
               />
-            </div>
+            </label>
 
             {error && (
-              <div className="text-sm text-kopi-coral bg-red-50 dark:bg-red-950 rounded-lg px-4 py-3">
+              <div className="rounded-[12px] bg-[var(--badbg)] text-[var(--bad)] px-3.5 py-2.5 text-[13px] font-semibold">
                 {error}
               </div>
             )}
@@ -113,20 +105,14 @@ export default function LoginPage() {
             <button
               type="submit"
               disabled={loading}
-              className="w-full py-3 px-4 bg-kopi-green hover:bg-kopi-green/90 disabled:opacity-50
-                         text-white font-semibold rounded-lg transition-colors
-                         focus:ring-2 focus:ring-kopi-green focus:ring-offset-2"
+              className="w-full bg-[var(--btn)] text-white rounded-[12px] py-3 text-[14px] font-semibold inline-flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
             >
-              {loading ? "Memproses..." : "Masuk"}
+              {loading && <Loader2 size={16} className="animate-spin" />}
+              Masuk
             </button>
           </form>
         </div>
-
-        <p className="text-center text-xs text-gray-500 dark:text-gray-500 mt-6">
-          Kopi Nuri — Coffee &amp; Space
-        </p>
       </div>
     </div>
   );
 }
-
