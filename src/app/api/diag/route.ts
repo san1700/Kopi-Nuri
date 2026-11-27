@@ -1,19 +1,37 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
-import { compare } from "bcryptjs";
+import { compare, hash } from "bcryptjs";
 
 export const dynamic = "force-dynamic";
 
-export async function GET() {
+export async function GET(req: NextRequest) {
   try {
     const rawUrl = process.env.DATABASE_URL || "";
-    // Mask password
     const maskedUrl = rawUrl.replace(/:[^:@]+@/, ":****@");
 
-    // 1. Check raw connection
-    const dbNow = await prisma.$queryRaw`SELECT NOW() as now`;
+    const doReset = req.nextUrl.searchParams.get("reset") === "true";
 
-    // 2. Count & list users
+    let resetResult = null;
+    if (doReset) {
+      const newAdminHash = await hash("admin123", 12);
+      const newKasirHash = await hash("kasir123", 12);
+
+      await prisma.user.updateMany({
+        where: { username: "admin" },
+        data: { passwordHash: newAdminHash, isActive: true },
+      });
+
+      await prisma.user.updateMany({
+        where: { username: "kasir" },
+        data: { passwordHash: newKasirHash, isActive: true },
+      });
+
+      // Clear all login attempts / locks
+      await prisma.loginAttempt.deleteMany();
+
+      resetResult = "Password admin & kasir berhasil direset ke admin123 & kasir123, dan login attempts dibersihkan!";
+    }
+
     const users = await prisma.user.findMany({
       select: {
         id: true,
@@ -24,20 +42,24 @@ export async function GET() {
       },
     });
 
-    // 3. Test admin password
     const adminUser = users.find((u) => u.username === "admin");
     let adminPasswordMatch = false;
     if (adminUser) {
       adminPasswordMatch = await compare("admin123", adminUser.passwordHash);
     }
 
-    // 4. Check login attempts
+    const kasirUser = users.find((u) => u.username === "kasir");
+    let kasirPasswordMatch = false;
+    if (kasirUser) {
+      kasirPasswordMatch = await compare("kasir123", kasirUser.passwordHash);
+    }
+
     const attempts = await prisma.loginAttempt.findMany();
 
     return NextResponse.json({
       ok: true,
       databaseUrlMasked: maskedUrl,
-      dbNow,
+      resetResult,
       userCount: users.length,
       users: users.map((u) => ({
         username: u.username,
@@ -46,6 +68,8 @@ export async function GET() {
       })),
       adminFound: !!adminUser,
       adminPasswordMatch,
+      kasirFound: !!kasirUser,
+      kasirPasswordMatch,
       attempts,
     });
   } catch (err: unknown) {
@@ -54,11 +78,6 @@ export async function GET() {
       {
         ok: false,
         error: error.message,
-        stack: error.stack,
-        databaseUrlMasked: (process.env.DATABASE_URL || "").replace(
-          /:[^:@]+@/,
-          ":****@"
-        ),
       },
       { status: 500 }
     );
