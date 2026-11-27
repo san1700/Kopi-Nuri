@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { getMemberLedger } from "@/app/actions/member-portal";
 import { BottomNav } from "@/components/member/bottom-nav";
-import { Loader2, ChevronDown } from "lucide-react";
+import { Loader2, ChevronDown, ArrowDownLeft, ArrowUpRight, Sparkles, AlertCircle } from "lucide-react";
 
 type LedgerType = "EARN" | "BONUS" | "REDEEM" | "ADJUST";
 
@@ -23,10 +23,29 @@ const TYPE_LABEL: Record<LedgerType, string> = {
 };
 
 function ActivityIcon({ type }: { type: LedgerType }) {
-  if (type === "EARN") return <span className="text-green-500 text-lg">▲</span>;
-  if (type === "REDEEM") return <span className="text-red-500 text-lg">▼</span>;
-  if (type === "BONUS") return <span className="text-blue-500 text-lg">★</span>;
-  return <span className="text-yellow-500 text-lg">⚡</span>;
+  if (type === "EARN")
+    return (
+      <div className="w-9 h-9 rounded-[12px] bg-[var(--mint)] text-[var(--brand)] flex items-center justify-center flex-shrink-0">
+        <ArrowDownLeft className="w-4 h-4 stroke-[2.5]" />
+      </div>
+    );
+  if (type === "REDEEM")
+    return (
+      <div className="w-9 h-9 rounded-[12px] bg-[var(--badbg)] text-[var(--bad)] flex items-center justify-center flex-shrink-0">
+        <ArrowUpRight className="w-4 h-4 stroke-[2.5]" />
+      </div>
+    );
+  if (type === "BONUS")
+    return (
+      <div className="w-9 h-9 rounded-[12px] bg-[var(--mint)] text-[var(--brand)] flex items-center justify-center flex-shrink-0">
+        <Sparkles className="w-4 h-4 stroke-[2.5]" />
+      </div>
+    );
+  return (
+    <div className="w-9 h-9 rounded-[12px] bg-[var(--warnbg)] text-[var(--warn)] flex items-center justify-center flex-shrink-0">
+      <AlertCircle className="w-4 h-4 stroke-[2.5]" />
+    </div>
+  );
 }
 
 function formatDate(d: string | Date) {
@@ -68,7 +87,9 @@ export default function RiwayatPage() {
 
       if (result.success && result.data) {
         setEntries((prev) =>
-          reset ? (result.data!.entries as LedgerEntry[]) : [...prev, ...(result.data!.entries as LedgerEntry[])]
+          reset
+            ? (result.data!.entries as LedgerEntry[])
+            : [...prev, ...(result.data!.entries as LedgerEntry[])]
         );
         setHasMore(result.data.hasMore);
       }
@@ -112,71 +133,86 @@ export default function RiwayatPage() {
 
   return (
     <>
-      <div className="flex flex-col min-h-screen pb-20">
-        {/* Header */}
-        <div className="sticky top-0 bg-[#FDF8F0] z-10 px-4 pt-6 pb-3 border-b border-stone-100">
-          <h1 className="text-lg font-bold text-stone-800">Riwayat Poin</h1>
-          {/* Filter chips */}
-          <div className="flex gap-2 mt-3 overflow-x-auto pb-1 scrollbar-none">
-            {FILTERS.map((f) => (
-              <button
-                key={f.value}
-                onClick={() => handleFilterChange(f.value)}
-                className={`flex-shrink-0 px-3 py-1.5 rounded-full text-xs font-medium transition-colors ${
-                  filter === f.value
-                    ? "bg-[#1F5C2E] text-white"
-                    : "bg-white text-stone-600 border border-stone-200"
-                }`}
-              >
-                {f.label}
-              </button>
-            ))}
+      <div
+        className="flex flex-col min-h-screen"
+        style={{
+          paddingBottom: "calc(5.5rem + env(safe-area-inset-bottom, 1rem))",
+        }}
+      >
+        {/* Sticky Header with Filter Chips */}
+        <div className="sticky top-0 bg-[var(--bg)]/95 backdrop-blur-md z-20 px-4 pt-4 pb-3 border-b border-[var(--line)]">
+          <h1 className="text-[18px] font-extrabold text-[var(--ink)] tracking-tight">
+            Riwayat Poin
+          </h1>
+          <div className="flex gap-2 mt-2.5 overflow-x-auto pb-1 scrollbar-none">
+            {FILTERS.map((f) => {
+              const active = filter === f.value;
+              return (
+                <button
+                  key={f.value}
+                  type="button"
+                  onClick={() => handleFilterChange(f.value)}
+                  className={`flex-shrink-0 px-3.5 py-1.5 rounded-full text-[12px] font-bold transition-all cursor-pointer ${
+                    active
+                      ? "bg-[var(--brand)] text-white shadow-xs"
+                      : "bg-[var(--card)] text-[var(--mut)] border border-[var(--line)] hover:text-[var(--ink)]"
+                  }`}
+                >
+                  {f.label}
+                </button>
+              );
+            })}
           </div>
         </div>
 
         {loading ? (
-          <div className="flex-1 flex items-center justify-center">
-            <Loader2 className="w-6 h-6 animate-spin text-[#1F5C2E]" />
+          <div className="flex-1 flex flex-col items-center justify-center min-h-[50vh] gap-3">
+            <Loader2 className="w-7 h-7 animate-spin text-[var(--brand)]" />
+            <span className="text-[12.5px] text-[var(--mut)]">Memuat riwayat...</span>
           </div>
         ) : entries.length === 0 ? (
-          <div className="flex-1 flex items-center justify-center p-6 text-center">
-            <p className="text-stone-400 text-sm">Belum ada transaksi poin</p>
+          <div className="flex-1 flex flex-col items-center justify-center p-8 text-center">
+            <div className="w-14 h-14 rounded-2xl bg-[var(--in)] flex items-center justify-center mb-3 text-[var(--mut)]">
+              <AlertCircle className="w-7 h-7" />
+            </div>
+            <p className="text-[14px] font-bold text-[var(--ink)]">Belum ada transaksi</p>
+            <p className="text-[12px] text-[var(--mut)] mt-1">
+              Poin yang diperoleh dari transaksi atau reward akan tercatat di sini.
+            </p>
           </div>
         ) : (
-          <div className="flex-1 px-4 pt-2">
-            <div className="space-y-1">
-              {entries.map((item) => (
-                <div
-                  key={item.id}
-                  className="flex items-center gap-3 py-3 border-b border-stone-100"
-                >
-                  <div className="w-9 h-9 rounded-full bg-stone-100 flex items-center justify-center">
-                    <ActivityIcon type={item.type} />
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium text-stone-800 truncate">
-                      {TYPE_LABEL[item.type]}
-                    </p>
-                    <p className="text-xs text-stone-400 truncate">
-                      {item.note ?? "—"} · {formatDate(item.createdAt)}
-                    </p>
-                  </div>
-                  <span
-                    className={`text-sm font-bold flex-shrink-0 ${
-                      item.points >= 0 ? "text-green-600" : "text-red-500"
-                    }`}
-                  >
-                    {item.points >= 0 ? "+" : ""}{item.points} poin
-                  </span>
+          <div className="flex-1 px-4 pt-3.5 space-y-2.5">
+            {entries.map((item) => (
+              <div
+                key={item.id}
+                className="bg-[var(--card)] border border-[var(--line)] rounded-[18px] p-3.5 shadow-xs flex items-center gap-3.5"
+              >
+                <ActivityIcon type={item.type} />
+                <div className="flex-1 min-w-0">
+                  <p className="text-[13px] font-bold text-[var(--ink)] truncate">
+                    {TYPE_LABEL[item.type]}
+                  </p>
+                  <p className="text-[11px] text-[var(--mut)] truncate mt-0.5">
+                    {item.note || "—"} · {formatDate(item.createdAt)}
+                  </p>
                 </div>
-              ))}
-            </div>
+                <span
+                  className={`text-[13.5px] font-black flex-shrink-0 ${
+                    item.points >= 0 ? "text-[var(--brand)]" : "text-[var(--bad)]"
+                  }`}
+                >
+                  {item.points >= 0 ? "+" : ""}
+                  {item.points} poin
+                </span>
+              </div>
+            ))}
 
             {hasMore && (
               <button
+                type="button"
                 onClick={loadMore}
                 disabled={loadingMore}
-                className="w-full py-4 text-sm text-[#1F5C2E] font-medium flex items-center justify-center gap-2"
+                className="w-full py-3.5 mt-2 text-[13px] text-[var(--brand)] font-bold flex items-center justify-center gap-2 bg-[var(--card)] border border-[var(--line)] rounded-[14px] shadow-xs active:scale-[0.99] transition-transform cursor-pointer"
               >
                 {loadingMore ? (
                   <Loader2 className="w-4 h-4 animate-spin" />
@@ -196,4 +232,3 @@ export default function RiwayatPage() {
     </>
   );
 }
-

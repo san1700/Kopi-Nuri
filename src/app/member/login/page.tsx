@@ -3,8 +3,8 @@
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
+import Link from "next/link";
 import { loginMember } from "@/app/actions/member-portal";
-import { toast } from "sonner";
 import { Eye, EyeOff, Loader2 } from "lucide-react";
 
 export default function MemberLoginPage() {
@@ -35,31 +35,44 @@ export default function MemberLoginPage() {
   }
 
   return (
-    <div className="flex flex-col min-h-screen p-6 justify-center">
-      <div className="mb-10">
-        <Image
-          src="/logo.png"
-          alt="Kopi Nuri"
-          width={140}
-          height={56}
-          className="mx-auto object-contain"
-        />
+    <div className="flex flex-col min-h-screen px-5 py-8 justify-center">
+      {/* Logo Header */}
+      <div className="flex flex-col items-center mb-8">
+        <div className="w-16 h-16 rounded-[16px] bg-white p-2 border border-[var(--line)] shadow-md flex items-center justify-center">
+          <Image
+            src="/logo.png"
+            alt="Logo Kopi Nuri"
+            width={48}
+            height={48}
+            className="object-contain"
+            priority
+          />
+        </div>
+        <h1 className="text-[20px] font-extrabold text-[var(--ink)] mt-3 tracking-tight">
+          Kopi Nuri
+        </h1>
+        <p className="text-[12.5px] text-[var(--mut)]">Sistem Poin Member</p>
       </div>
 
-      <div className="bg-white rounded-2xl p-6 shadow-sm">
-        <h1 className="text-xl font-bold text-stone-800 mb-1">Masuk Portal Member</h1>
-        <p className="text-sm text-stone-500 mb-6">Gunakan HP dan PIN yang kamu daftarkan</p>
+      {/* Kartu Form Login */}
+      <div className="bg-[var(--card)] border border-[var(--line)] rounded-[22px] p-6 shadow-sm">
+        <h2 className="text-[17px] font-extrabold text-[var(--ink)] mb-1">
+          Masuk Portal Member
+        </h2>
+        <p className="text-[12.5px] text-[var(--mut)] mb-5">
+          Gunakan nomor WhatsApp dan PIN Anda
+        </p>
 
         {error && (
-          <div className="bg-red-50 border border-red-200 rounded-xl p-3 mb-4 text-sm text-red-700">
+          <div className="bg-[var(--badbg)] border border-[var(--bad)]/20 rounded-[12px] p-3 mb-4 text-[12.5px] font-semibold text-[var(--bad)]">
             {error}
           </div>
         )}
 
         <div className="space-y-4">
           <div>
-            <label className="block text-sm font-medium text-stone-700 mb-1">
-              Nomor HP
+            <label className="block text-[12px] font-bold text-[var(--ink)] mb-1.5">
+              Nomor WhatsApp
             </label>
             <input
               type="tel"
@@ -68,13 +81,13 @@ export default function MemberLoginPage() {
               onChange={(e) => setPhone(e.target.value)}
               placeholder="08xx atau 62xx"
               onKeyDown={(e) => e.key === "Enter" && handleSubmit()}
-              className="w-full border border-stone-300 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-[#1F5C2E]"
+              className="w-full border border-[var(--line)] bg-[var(--in)] text-[var(--ink)] rounded-[12px] px-3.5 py-2.5 text-[14px] focus:outline-none focus:border-[var(--brand)]"
             />
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-stone-700 mb-1">
-              PIN
+            <label className="block text-[12px] font-bold text-[var(--ink)] mb-1.5">
+              PIN (6 angka)
             </label>
             <div className="relative">
               <input
@@ -82,43 +95,52 @@ export default function MemberLoginPage() {
                 inputMode="numeric"
                 maxLength={6}
                 value={pin}
-                onChange={(e) => setPin(e.target.value.replace(/\D/g, "").slice(0, 6))}
+                onChange={(e) =>
+                  setPin(e.target.value.replace(/\D/g, "").slice(0, 6))
+                }
                 placeholder="••••••"
                 onKeyDown={(e) => e.key === "Enter" && handleSubmit()}
-                className="w-full border border-stone-300 rounded-xl px-4 py-3 pr-12 text-sm focus:outline-none focus:border-[#1F5C2E]"
+                className="w-full border border-[var(--line)] bg-[var(--in)] text-[var(--ink)] rounded-[12px] px-3.5 py-2.5 pr-12 text-[14px] font-mono tracking-widest focus:outline-none focus:border-[var(--brand)]"
               />
               <button
                 type="button"
                 onClick={() => setShowPin(!showPin)}
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-stone-400"
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-[var(--mut)] hover:text-[var(--ink)]"
               >
-                {showPin ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                {showPin ? (
+                  <EyeOff className="w-4 h-4" />
+                ) : (
+                  <Eye className="w-4 h-4" />
+                )}
               </button>
             </div>
           </div>
 
           <button
+            type="button"
             onClick={handleSubmit}
             disabled={isPending}
-            className="w-full bg-[#1F5C2E] text-white rounded-xl py-3 font-semibold text-base disabled:opacity-50 flex items-center justify-center gap-2 mt-2"
+            className="w-full bg-[var(--btn)] text-white rounded-[12px] py-3 text-[14px] font-bold shadow-xs hover:opacity-95 active:scale-[0.99] transition-all disabled:opacity-50 flex items-center justify-center gap-2 mt-2 cursor-pointer"
           >
             {isPending && <Loader2 className="w-4 h-4 animate-spin" />}
-            Masuk
+            Masuk ke Portal
           </button>
         </div>
       </div>
 
-      <p className="text-center text-sm text-stone-500 mt-6">
-        Belum punya akun?{" "}
-        <a href="/member/daftar" className="text-[#1F5C2E] font-semibold">
-          Daftar gratis
-        </a>
+      <p className="text-center text-[13px] text-[var(--mut)] mt-6">
+        Belum terdaftar sebagai member?{" "}
+        <Link
+          href="/member/daftar"
+          className="text-[var(--brand)] font-bold hover:underline"
+        >
+          Daftar sekarang
+        </Link>
       </p>
 
-      <p className="text-center text-xs text-stone-400 mt-8">
-        Kopi Nuri — Coffee &amp; Space
+      <p className="text-center text-[11px] text-[var(--mut)] mt-8">
+        Kopi Nuri Coffee &amp; Space
       </p>
     </div>
   );
 }
-

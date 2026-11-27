@@ -1,6 +1,4 @@
 import type { Metadata, Viewport } from "next";
-import { getMemberSession } from "@/lib/member-auth";
-import { redirect } from "next/navigation";
 import { SwRegister } from "@/app/member/sw-register";
 import { Toaster } from "sonner";
 
@@ -16,7 +14,14 @@ export const metadata: Metadata = {
 };
 
 export const viewport: Viewport = {
-  themeColor: "#1F5C2E",
+  themeColor: [
+    { media: "(prefers-color-scheme: light)", color: "#EEF3EE" },
+    { media: "(prefers-color-scheme: dark)", color: "#0D1C15" },
+  ],
+  width: "device-width",
+  initialScale: 1,
+  maximumScale: 1,
+  viewportFit: "cover",
 };
 
 interface Props {
@@ -24,17 +29,14 @@ interface Props {
 }
 
 export default async function MemberLayout({ children }: Props) {
-  // Server-side session check (layout guard)
-  // Note: public routes /login and /daftar bypass this via middleware;
-  // but layout is also mounted for them. We skip redirect here and let
-  // middleware handle it so the layout doesn't double-redirect.
-
   return (
-    <div className="min-h-screen bg-stone-100 flex justify-center">
-      <div
-        className="w-full max-w-sm min-h-screen bg-[#FDF8F0] relative flex flex-col"
-        style={{ boxShadow: "0 0 40px rgba(0,0,0,0.12)" }}
-      >
+    <div className="min-h-screen bg-[var(--bg)] flex justify-center selection:bg-[var(--mint)] selection:text-[var(--brand)]">
+      {/* 
+        Container presisi untuk mobile:
+        - Layar mobile (<640px): 100% edge-to-edge (w-full) tanpa batas buatan
+        - Layar tablet/desktop (>=640px): sm:max-w-md terpusat dengan frame rapi
+      */}
+      <div className="w-full sm:max-w-md min-h-screen bg-[var(--bg)] relative flex flex-col pt-[env(safe-area-inset-top,0px)]">
         <SwRegister />
         <Toaster position="top-center" richColors />
         {children}
@@ -42,4 +44,3 @@ export default async function MemberLayout({ children }: Props) {
     </div>
   );
 }
-

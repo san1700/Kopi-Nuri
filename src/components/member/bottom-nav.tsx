@@ -15,24 +15,41 @@ export function BottomNav() {
   const pathname = usePathname();
 
   return (
-    <nav className="fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-sm bg-white border-t border-stone-200 z-40">
-      <div className="flex">
+    <nav
+      aria-label="Navigasi Member"
+      className="fixed bottom-0 left-1/2 -translate-x-1/2 w-full sm:max-w-md bg-[var(--card)]/95 backdrop-blur-md border-t border-[var(--line)] z-40 shadow-[0_-4px_24px_rgba(16,51,31,0.06)]"
+      style={{
+        paddingBottom: "max(0.625rem, env(safe-area-inset-bottom, 0.625rem))",
+      }}
+    >
+      <div className="grid grid-cols-5 items-center px-1.5 pt-1.5">
         {NAV_ITEMS.map(({ href, label, icon: Icon }) => {
           const active = pathname === href || pathname.startsWith(href + "/");
           return (
             <Link
               key={href}
               href={href}
-              className={`flex-1 flex flex-col items-center gap-0.5 py-2 text-[10px] font-medium transition-colors ${
+              aria-current={active ? "page" : undefined}
+              className={`flex flex-col items-center justify-center min-h-[48px] py-1 px-1 rounded-[12px] transition-all relative ${
                 active
-                  ? "text-[#1F5C2E]"
-                  : "text-stone-400 hover:text-stone-600"
+                  ? "text-[var(--brand)] font-bold"
+                  : "text-[var(--mut)] hover:text-[var(--ink)] font-medium"
               }`}
             >
-              <Icon
-                className={`w-5 h-5 ${active ? "stroke-[2.5]" : "stroke-2"}`}
-              />
-              {label}
+              <div
+                className={`p-1 rounded-[10px] transition-all flex items-center justify-center ${
+                  active ? "bg-[var(--mint)]" : ""
+                }`}
+              >
+                <Icon
+                  className={`w-5 h-5 ${
+                    active ? "stroke-[2.5]" : "stroke-[1.8]"
+                  }`}
+                />
+              </div>
+              <span className="text-[10.5px] leading-tight mt-0.5 tracking-tight truncate max-w-full">
+                {label}
+              </span>
             </Link>
           );
         })}
@@ -40,4 +57,3 @@ export function BottomNav() {
     </nav>
   );
 }
-

@@ -34,82 +34,103 @@ export default function RewardPage() {
 
   return (
     <>
-      <div className="flex flex-col min-h-screen pb-20">
-        {/* Header */}
-        <div className="px-4 pt-6 pb-4 border-b border-stone-100">
-          <h1 className="text-lg font-bold text-stone-800">Katalog Reward</h1>
-          {data && (
-            <p className="text-sm text-stone-500 mt-1">
-              Saldo kamu:{" "}
-              <span className="font-bold text-[#1F5C2E]">
-                {data.balance.toLocaleString("id-ID")} poin
+      <div
+        className="flex flex-col min-h-screen"
+        style={{
+          paddingBottom: "calc(5.5rem + env(safe-area-inset-bottom, 1rem))",
+        }}
+      >
+        {/* Sticky Header */}
+        <header className="sticky top-0 bg-[var(--bg)]/95 backdrop-blur-md z-20 px-4 pt-4 pb-3 border-b border-[var(--line)]">
+          <div className="flex items-center justify-between">
+            <h1 className="text-[18px] font-extrabold text-[var(--ink)] tracking-tight">
+              Katalog Reward
+            </h1>
+            {data && (
+              <span className="text-[12px] font-bold text-[var(--brand)] bg-[var(--mint)] px-2.5 py-1 rounded-full">
+                Saldo: {data.balance.toLocaleString("id-ID")} poin
               </span>
-            </p>
-          )}
-        </div>
+            )}
+          </div>
+        </header>
 
-        {/* Info tukar di kasir */}
-        <div className="mx-4 mt-4 bg-amber-50 border border-amber-200 rounded-xl p-3 flex gap-2">
-          <Info className="w-4 h-4 text-amber-500 flex-shrink-0 mt-0.5" />
-          <p className="text-xs text-amber-700">
-            Penukaran reward dilakukan di <strong>kasir Kopi Nuri</strong>. Tunjukkan kartu QR kamu kepada kasir.
+        {/* Info Petunjuk Penukaran */}
+        <div className="mx-4 mt-3.5 bg-[var(--warnbg)] border border-[var(--warn)]/20 rounded-[16px] p-3.5 flex gap-2.5 items-start">
+          <Info className="w-4 h-4 text-[var(--warn)] flex-shrink-0 mt-0.5" />
+          <p className="text-[12px] text-[var(--ink)] leading-relaxed">
+            Penukaran reward dilakukan di <b>kasir Kopi Nuri</b>. Tunjukkan kartu QR member Anda saat memesan.
           </p>
         </div>
 
         {loading ? (
-          <div className="flex-1 flex items-center justify-center">
-            <Loader2 className="w-6 h-6 animate-spin text-[#1F5C2E]" />
+          <div className="flex-1 flex flex-col items-center justify-center min-h-[50vh] gap-3">
+            <Loader2 className="w-7 h-7 animate-spin text-[var(--brand)]" />
+            <span className="text-[12.5px] text-[var(--mut)]">Memuat katalog reward...</span>
           </div>
         ) : !data || data.rewards.length === 0 ? (
-          <div className="flex-1 flex items-center justify-center p-6 text-center">
-            <div>
-              <Gift className="w-12 h-12 text-stone-200 mx-auto mb-3" />
-              <p className="text-stone-400 text-sm">Belum ada reward tersedia</p>
+          <div className="flex-1 flex flex-col items-center justify-center p-8 text-center">
+            <div className="w-14 h-14 rounded-2xl bg-[var(--in)] flex items-center justify-center mb-3 text-[var(--mut)]">
+              <Gift className="w-7 h-7" />
             </div>
+            <p className="text-[14px] font-bold text-[var(--ink)]">Belum ada reward</p>
+            <p className="text-[12px] text-[var(--mut)] mt-1">
+              Reward baru akan segera hadir di katalog ini.
+            </p>
           </div>
         ) : (
-          <div className="px-4 pt-4 grid grid-cols-2 gap-3">
+          <div className="px-4 pt-3.5 grid grid-cols-2 gap-3">
             {data.rewards.map((reward) => {
-              const canRedeem = data.balance >= reward.pointCost && data.balance >= data.redeemMinPoints;
+              const canRedeem =
+                data.balance >= reward.pointCost &&
+                data.balance >= data.redeemMinPoints;
               const deficit = reward.pointCost - data.balance;
 
               return (
                 <div
                   key={reward.id}
-                  className="bg-white rounded-2xl p-4 shadow-sm flex flex-col gap-2"
+                  className="bg-[var(--card)] border border-[var(--line)] rounded-[20px] p-3.5 shadow-xs flex flex-col justify-between"
                 >
-                  <div className="w-10 h-10 rounded-xl bg-[#1F5C2E]/10 flex items-center justify-center mb-1">
-                    <Gift className="w-5 h-5 text-[#1F5C2E]" />
-                  </div>
+                  <div>
+                    <div className="w-10 h-10 rounded-[12px] bg-[var(--mint)] text-[var(--brand)] flex items-center justify-center mb-2.5">
+                      <Gift className="w-5 h-5 stroke-[2.2]" />
+                    </div>
 
-                  <p className="text-sm font-semibold text-stone-800 leading-tight">
-                    {reward.name}
-                  </p>
+                    <h3 className="text-[13px] font-bold text-[var(--ink)] leading-snug line-clamp-2">
+                      {reward.name}
+                    </h3>
 
-                  {reward.description && (
-                    <p className="text-xs text-stone-400 leading-snug line-clamp-2">
-                      {reward.description}
-                    </p>
-                  )}
-
-                  <div className="mt-auto pt-2 border-t border-stone-100">
-                    <p className="text-sm font-bold text-[#1F5C2E]">
-                      {reward.pointCost.toLocaleString("id-ID")} poin
-                    </p>
-                    {reward.stock !== null && (
-                      <p className="text-xs text-stone-400">Stok: {reward.stock}</p>
+                    {reward.description && (
+                      <p className="text-[11px] text-[var(--mut)] leading-normal line-clamp-2 mt-1">
+                        {reward.description}
+                      </p>
                     )}
                   </div>
 
-                  {canRedeem ? (
-                    <span className="text-[10px] font-semibold text-green-600 bg-green-50 rounded-lg px-2 py-1 text-center">
-                      ✓ Cukup poin
-                    </span>
-                  ) : (
-                    <span className="text-[10px] font-medium text-stone-400 bg-stone-100 rounded-lg px-2 py-1 text-center">
-                      Kurang {Math.max(deficit, 0).toLocaleString("id-ID")} poin
-                    </span>
-                  )}
+                  <div className="mt-3 pt-2.5 border-t border-[var(--line)]">
+                    <p className="text-[14px] font-black text-[var(--brand)]">
+                      {reward.pointCost.toLocaleString("id-ID")}{" "}
+                      <span className="text-[11px] font-semibold text-[var(--mut)]">
+                        poin
+                      </span>
+                    </p>
+                    {reward.stock !== null && (
+                      <p className="text-[10.5px] text-[var(--mut)] mt-0.5">
+                        Stok: {reward.stock}
+                      </p>
+                    )}
+
+                    <div className="mt-2">
+                      {canRedeem ? (
+                        <span className="inline-block w-full text-[10.5px] font-extrabold text-[var(--brand)] bg-[var(--mint)] rounded-[8px] py-1 text-center">
+                          ✓ Poin Cukup
+                        </span>
+                      ) : (
+                        <span className="inline-block w-full text-[10.5px] font-semibold text-[var(--mut)] bg-[var(--in)] rounded-[8px] py-1 text-center truncate px-1">
+                          Kurang {Math.max(deficit, 0).toLocaleString("id-ID")}
+                        </span>
+                      )}
+                    </div>
+                  </div>
                 </div>
               );
             })}
@@ -121,4 +142,3 @@ export default function RewardPage() {
     </>
   );
 }
-
